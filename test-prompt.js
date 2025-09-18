@@ -1,0 +1,1 @@
+export const testPrompt = "Explain quantum computing in comprehensive in 500 words";

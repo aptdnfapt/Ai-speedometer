@@ -1,0 +1,30 @@
+{
+  "providers": [
+    {
+      "id": "example_provider_1",
+      "name": "Your Provider Name",
+      "type": "openai-compatible",
+      "baseUrl": "https://api.example.com/v1",
+      "apiKey": "YOUR_API_KEY_HERE",
+      "models": [
+        {
+          "name": "model-name",
+          "id": "example_model_1"
+        }
+      ]
+    },
+    {
+      "id": "example_anthropic_provider",
+      "name": "Your Anthropic Provider",
+      "type": "anthropic",
+      "baseUrl": "https://api.anthropic.com",
+      "apiKey": "YOUR_ANTHROPIC_API_KEY_HERE",
+      "models": [
+        {
+          "name": "claude-3-sonnet-20240229",
+          "id": "example_anthropic_model_1"
+        }
+      ]
+    }
+  ]
+}
