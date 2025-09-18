@@ -8,9 +8,126 @@ A comprehensive, modern CLI tool for benchmarking AI models across multiple prov
 git clone https://github.com/aptdnfapt/Ai-speedometer
 # Install dependencies
 npm install
+# Set up your API keys and providers (see Setup Guide below)
 # Start the CLI
 npm run cli
 ```
+
+## Setup Guide
+
+### Before You Begin
+
+Before running the benchmark, you need to configure your AI providers with API keys and base URLs. The tool supports two types of providers:
+
+1. **OpenAI-Compatible providers** (OpenAI, local models, custom endpoints)
+2. **Anthropic providers** (Claude models)
+
+### Step 1: Get Your API Keys
+
+#### OpenAI-Compatible Providers
+- **OpenAI**: Get your API key from [OpenAI API Keys](https://platform.openai.com/api-keys)
+- **Other providers**: Check your provider's documentation for API key access
+
+#### Anthropic Providers
+- **Anthropic**: Get your API key from [Anthropic Console](https://console.anthropic.com/settings/keys)
+
+### Step 2: Configure Providers
+
+You have two ways to configure providers:
+
+#### Method A: Use the Interactive CLI (Recommended)
+
+1. Run the CLI:
+   ```bash
+   npm run cli
+   ```
+
+2. Select "Set Model" from the main menu
+
+3. Choose "Add New Provider"
+
+4. Select the provider type:
+   - **OpenAI Compatible**: For OpenAI, local models, or custom endpoints
+   - **Anthropic**: For Claude models
+
+5. Enter the required information:
+   - **Provider name**: A friendly name (e.g., "My OpenAI", "Local Ollama")
+   - **Base URL**: The API endpoint (see examples below)
+   - **API Key**: Your secret API key
+   - **Model name**: The specific model you want to test
+
+#### Method B: Manual Configuration
+
+1. Copy the template:
+   ```bash
+   cp ai-benchmark-config.json.template ai-benchmark-config.json
+   ```
+
+2. Edit `ai-benchmark-config.json` with your provider details:
+
+   ```json
+   {
+     "providers": [
+       {
+         "id": "my_openai",
+         "name": "OpenAI",
+         "type": "openai-compatible",
+         "baseUrl": "https://api.openai.com/v1",
+         "apiKey": "sk-your-openai-key-here",
+         "models": [
+           {
+             "name": "gpt-4",
+             "id": "gpt4_model"
+           }
+         ]
+       },
+       {
+         "id": "my_anthropic",
+         "name": "Anthropic",
+         "type": "anthropic",
+         "baseUrl": "https://api.anthropic.com",
+         "apiKey": "sk-ant-your-anthropic-key-here",
+         "models": [
+           {
+             "name": "claude-3-sonnet-20240229",
+             "id": "claude3_sonnet"
+           }
+         ]
+       }
+     ]
+   }
+   ```
+
+### Step 3: Common Base URL Examples
+
+#### OpenAI-Compatible Providers
+- **OpenAI**: `https://api.openai.com/v1`
+- **Local Ollama**: `http://localhost:11434/v1`
+- **Groq**: `https://api.groq.com/openai/v1`
+- **Together AI**: `https://api.together.xyz/v1`
+- **Anyscale**: `https://api.endpoints.anyscale.com/v1`
+- **Fireworks AI**: `https://api.fireworks.ai/inference/v1`
+
+#### Anthropic Providers
+- **Anthropic Official**: `https://api.anthropic.com`
+- **Custom Anthropic endpoints**: Check with your provider
+
+### Step 4: Security
+
+Your configuration file contains sensitive API keys. The `.gitignore` file already excludes `ai-benchmark-config.json` to prevent accidental commits.
+
+**Never commit your API keys to version control!**
+
+### Step 5: Verify Configuration
+
+After setting up, run the CLI and check that your providers appear in the model selection menu. If you see your providers and models listed, you're ready to benchmark!
+
+### Troubleshooting
+
+- **"Provider not found"**: Check your base URL and API key
+- **"Model not available"**: Verify the model name is correct for your provider
+- **"Connection failed"**: Ensure your base URL is accessible and you have internet access
+- **"Invalid API key"**: Double-check your API key is correct and has proper permissions
 
 ## Usage Examples
 
