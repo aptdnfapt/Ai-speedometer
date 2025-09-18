@@ -65,7 +65,7 @@ function clearScreen() {
 }
 
 function showHeader() {
-  console.log(colorText('🚀 AI Speed Benchmark CLI', 'cyan'));
+  console.log(colorText('Ai-speedometer', 'cyan'));
   console.log(colorText('=============================', 'cyan'));
   console.log('');
 }
@@ -80,7 +80,7 @@ function loadConfig() {
       return JSON.parse(data);
     }
   } catch (error) {
-    console.log(colorText('⚠️  Error loading config, starting fresh: ', 'yellow') + error.message);
+    console.log(colorText('Error loading config, starting fresh: ', 'yellow') + error.message);
   }
   return { providers: [] };
 }
@@ -89,7 +89,7 @@ function saveConfig(config) {
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
   } catch (error) {
-    console.log(colorText('❌ Error saving config: ', 'red') + error.message);
+    console.log(colorText('Error saving config: ', 'red') + error.message);
   }
 }
 
@@ -115,7 +115,7 @@ function getKeyPress() {
 async function selectModelsCircular() {
   clearScreen();
   showHeader();
-  console.log(colorText('🎯 Select Models for Benchmark', 'magenta'));
+  console.log(colorText('Select Models for Benchmark', 'magenta'));
   console.log('');
   
   const config = loadConfig();
@@ -152,7 +152,7 @@ async function selectModelsCircular() {
     while (true) {
       clearScreen();
       showHeader();
-      console.log(colorText('🎯 Select Models for Benchmark', 'magenta'));
+      console.log(colorText('Select Models for Benchmark', 'magenta'));
       console.log('');
 console.log(colorText('Use ↑↓ arrows to navigate, SPACE to select/deselect, ENTER to confirm', 'cyan'));
     console.log(colorText('Navigation is circular - moving past bottom/top wraps around', 'dim'));
@@ -226,7 +226,7 @@ console.log(colorText('Use ↑↓ arrows to navigate, SPACE to select/deselect, 
     while (true) {
       clearScreen();
       showHeader();
-      console.log(colorText('🎯 Select Models for Benchmark', 'magenta'));
+      console.log(colorText('Select Models for Benchmark', 'magenta'));
       console.log(colorText('Use ↑↓ arrows to navigate, SPACE to select/deselect, ENTER to confirm', 'cyan'));
       console.log(colorText('Navigation is circular - moving past bottom/top wraps around', 'dim'));
       console.log(colorText('Press "A" to select all models, "N" to deselect all', 'cyan'));
@@ -297,19 +297,19 @@ console.log(colorText('Use ↑↓ arrows to navigate, SPACE to select/deselect, 
 // Enhanced benchmark with streaming (run in parallel)
 async function runStreamingBenchmark(models) {
   if (models.length === 0) {
-    console.log(colorText('❌ No models selected for benchmarking.', 'red'));
+    console.log(colorText('No models selected for benchmarking.', 'red'));
     return;
   }
   
   clearScreen();
   showHeader();
-  console.log(colorText('🏃 Running Benchmark...', 'green'));
-  console.log(colorText(`🚀 Running ${models.length} models in parallel...`, 'cyan'));
+  console.log(colorText('Running Benchmark...', 'green'));
+  console.log(colorText(`Running ${models.length} models in parallel...`, 'cyan'));
   console.log('');
   
   // Create a function to benchmark a single model
   const benchmarkModel = async (model) => {
-    console.log(colorText(`🔍 Testing ${model.name} (${model.providerName})...`, 'yellow'));
+    console.log(colorText(`Testing ${model.name} (${model.providerName})...`, 'yellow'));
     
     try {
       let firstTokenTime = null;
@@ -366,7 +366,7 @@ async function runStreamingBenchmark(models) {
       const promptTokens = usage?.promptTokens || Math.round(testPrompt.length / 4);
       const totalTokens = usage?.totalTokens || (completionTokens + promptTokens);
       
-      console.log(colorText('✅ Completed!', 'green'));
+      console.log(colorText('Completed!', 'green'));
       console.log(colorText(`  Total Time: ${(totalTime / 1000).toFixed(2)}s`, 'cyan'));
       console.log(colorText(`  TTFT: ${(timeToFirstToken / 1000).toFixed(2)}s`, 'cyan'));
       console.log(colorText(`  Tokens/Sec: ${tokensPerSecond.toFixed(1)}`, 'cyan'));
@@ -384,7 +384,7 @@ async function runStreamingBenchmark(models) {
       };
       
     } catch (error) {
-      console.log(colorText('❌ Failed: ', 'red') + error.message);
+      console.log(colorText('Failed: ', 'red') + error.message);
       return {
         model: model.name,
         provider: model.providerName,
@@ -401,12 +401,12 @@ async function runStreamingBenchmark(models) {
   };
   
   // Run all benchmarks in parallel
-  console.log(colorText('🚀 Starting parallel benchmark execution...', 'cyan'));
+  console.log(colorText('Starting parallel benchmark execution...', 'cyan'));
   const promises = models.map(model => benchmarkModel(model));
   const results = await Promise.all(promises);
   
   console.log('');
-  console.log(colorText('✅ All benchmarks completed!', 'green'));
+  console.log(colorText('All benchmarks completed!', 'green'));
   
   await displayColorfulResults(results);
 }
@@ -415,7 +415,7 @@ async function runStreamingBenchmark(models) {
 async function displayColorfulResults(results) {
   clearScreen();
   showHeader();
-  console.log(colorText('📊 BENCHMARK RESULTS', 'magenta'));
+  console.log(colorText('BENCHMARK RESULTS', 'magenta'));
   console.log(colorText('=========================', 'magenta'));
   console.log('');
   
@@ -423,13 +423,13 @@ async function displayColorfulResults(results) {
   const successfulResults = results.filter(r => r.success);
   
   if (successfulResults.length === 0) {
-    console.log(colorText('❌ No successful benchmarks to display.', 'red'));
+    console.log(colorText('No successful benchmarks to display.', 'red'));
     await question(colorText('Press Enter to continue...', 'yellow'));
     return;
   }
   
   // Create comprehensive table
-  console.log(colorText('📈 COMPREHENSIVE PERFORMANCE SUMMARY', 'yellow'));
+  console.log(colorText('COMPREHENSIVE PERFORMANCE SUMMARY', 'yellow'));
   
   const table = new Table({
     head: [
@@ -468,12 +468,12 @@ async function displayColorfulResults(results) {
   console.log('');
   
   // Enhanced performance comparison charts
-  console.log(colorText('📊 PERFORMANCE COMPARISON CHARTS', 'yellow'));
+  console.log(colorText('PERFORMANCE COMPARISON CHARTS', 'yellow'));
   console.log(colorText('─'.repeat(80), 'dim'));
   console.log('');
   
   // Time comparison chart
-  console.log(colorText('⏱️  TOTAL TIME COMPARISON (lower is better)', 'cyan'));
+  console.log(colorText('TOTAL TIME COMPARISON (lower is better)', 'cyan'));
   const maxTime = Math.max(...successfulResults.map(r => r.totalTime));
   const maxModelLength = Math.max(...successfulResults.map(r => r.model.length));
   
@@ -495,7 +495,7 @@ async function displayColorfulResults(results) {
   });
   
   console.log('');
-  console.log(colorText('⚡ TOKENS PER SECOND COMPARISON (higher is better)', 'cyan'));
+  console.log(colorText('TOKENS PER SECOND COMPARISON (higher is better)', 'cyan'));
   
   const maxTps = Math.max(...successfulResults.map(r => r.tokensPerSecond));
   
@@ -521,7 +521,7 @@ async function displayColorfulResults(results) {
   // Show failed benchmarks
   const failedResults = results.filter(r => !r.success);
   if (failedResults.length > 0) {
-    console.log(colorText('❌ FAILED BENCHMARKS', 'red'));
+    console.log(colorText('FAILED BENCHMARKS', 'red'));
     console.log(colorText('─'.repeat(40), 'dim'));
     failedResults.forEach(result => {
       console.log(colorText(`${result.model} (${result.provider}): ${result.error}`, 'red'));
@@ -529,7 +529,7 @@ async function displayColorfulResults(results) {
     console.log('');
   }
   
-  console.log(colorText('🎉 Benchmark completed!', 'green'));
+  console.log(colorText('Benchmark completed!', 'green'));
   await question(colorText('Press Enter to continue...', 'yellow'));
 }
 
@@ -537,7 +537,7 @@ async function displayColorfulResults(results) {
 async function addProvider() {
   clearScreen();
   showHeader();
-  console.log(colorText('➕ Add New Provider', 'magenta'));
+  console.log(colorText('Add New Provider', 'magenta'));
   console.log('');
   
   const providerOptions = [
@@ -552,7 +552,7 @@ async function addProvider() {
   while (true) {
     clearScreen();
     showHeader();
-    console.log(colorText('➕ Add New Provider', 'magenta'));
+    console.log(colorText('Add New Provider', 'magenta'));
     console.log(colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan'));
     console.log(colorText('Navigation is circular', 'dim'));
     console.log('');
@@ -609,7 +609,7 @@ async function addProvider() {
     
     config.providers.push(provider);
     saveConfig(config);
-    console.log(colorText('✅ Provider added successfully!', 'green'));
+    console.log(colorText('Provider added successfully!', 'green'));
     
   } else if (selectedChoice.type === 'anthropic') {
     // Anthropic
@@ -629,7 +629,7 @@ async function addProvider() {
     
     config.providers.push(provider);
     saveConfig(config);
-    console.log(colorText('✅ Provider added successfully!', 'green'));
+    console.log(colorText('Provider added successfully!', 'green'));
   }
   
   await question(colorText('\nPress Enter to continue...', 'yellow'));
@@ -638,7 +638,7 @@ async function addProvider() {
 async function listProviders() {
   clearScreen();
   showHeader();
-  console.log(colorText('📋 Available Providers', 'magenta'));
+  console.log(colorText('Available Providers', 'magenta'));
   console.log('');
   
   const config = loadConfig();
@@ -668,7 +668,7 @@ async function listProviders() {
 async function addModelToProvider() {
   clearScreen();
   showHeader();
-  console.log(colorText('➕ Add Model to Provider', 'magenta'));
+  console.log(colorText('Add Model to Provider', 'magenta'));
   console.log('');
   
   const config = loadConfig();
@@ -684,7 +684,7 @@ async function addModelToProvider() {
   while (true) {
     clearScreen();
     showHeader();
-    console.log(colorText('➕ Add Model to Provider', 'magenta'));
+    console.log(colorText('Add Model to Provider', 'magenta'));
     console.log(colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan'));
     console.log(colorText('Navigation is circular', 'dim'));
     console.log('');
@@ -727,7 +727,7 @@ async function addModelToProvider() {
   });
   
   saveConfig(config);
-  console.log(colorText('✅ Model added successfully!', 'green'));
+  console.log(colorText('Model added successfully!', 'green'));
   await question(colorText('\nPress Enter to continue...', 'yellow'));
 }
 
@@ -742,7 +742,7 @@ async function showMainMenu() {
       }
     }},
     { id: 3, text: 'Exit', action: () => {
-      console.log(colorText('👋 Goodbye!', 'green'));
+      console.log(colorText('Goodbye!', 'green'));
       rl.close();
       process.exit(0);
     }}
@@ -835,7 +835,7 @@ async function showModelMenu() {
 
 // Handle process interruption
 process.on('SIGINT', () => {
-  console.log(colorText('\n\n👋 CLI interrupted by user', 'yellow'));
+  console.log(colorText('\n\nCLI interrupted by user', 'yellow'));
   rl.close();
   process.exit(0);
 });

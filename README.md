@@ -1,8 +1,8 @@
-# 🚀 AI Speed Benchmark CLI
+# Ai-speedometer
 
 A comprehensive, modern CLI tool for benchmarking AI models across multiple providers with **parallel execution**, **professional tables**, **arrow key navigation**, and **advanced metrics**.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 git clone https://github.com/aptdnfapt/Ai-speedometer
@@ -12,11 +12,11 @@ npm install
 npm run cli
 ```
 
-## 🎮 Usage Examples
+## Usage Examples
 
 ### Main Menu (Modern Arrow Navigation)
 ```
-🚀 AI Speed Benchmark CLI
+Ai-speedometer
 =============================
 
 Use ↑↓ arrows to navigate, ENTER to select
@@ -29,7 +29,7 @@ Navigation is circular
 
 ### Model Selection (Circle-Based UI)
 ```
-🎯 Select Models for Benchmark
+Select Models for Benchmark
 
 Use ↑↓ arrows to navigate, SPACE to select/deselect, ENTER to confirm
 Navigation is circular - moving past bottom/top wraps around
@@ -45,7 +45,7 @@ Selected: 1 models
 
 ### Provider Management (Vertical Stacking)
 ```
-📋 Available Providers
+Available Providers
 
 1. chutes (openai-compatible)
    Models:
@@ -63,10 +63,10 @@ Selected: 1 models
 
 ### Benchmark Results (Professional Tables + Enhanced Charts)
 ```
-📊 BENCHMARK RESULTS
+BENCHMARK RESULTS
 =========================
 
-📈 COMPREHENSIVE PERFORMANCE SUMMARY
+COMPREHENSIVE PERFORMANCE SUMMARY
 ┌─────────────────────────┬─────────────────────┬─────────────────┬────────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐
 │ Model                  │ Provider            │ Total Time(s)   │ TTFT(s)    │ Tokens/Sec     │ Output Tokens   │ Prompt Tokens   │ Total Tokens    │
 ├─────────────────────────┼─────────────────────┼─────────────────┼────────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤
@@ -75,29 +75,29 @@ Selected: 1 models
 │ glm-4.5                │ zai                 │ 11.30           │ 5.30       │ 72.9           │ 824             │ 14              │ 1087            │
 └─────────────────────────┴─────────────────────┴─────────────────┴────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘
 
-📊 PERFORMANCE COMPARISON CHARTS
+PERFORMANCE COMPARISON CHARTS
 ──────────────────────────────────────────────────────────────────────────────────────────
 
-⏱️  TOTAL TIME COMPARISON (lower is better)
+TOTAL TIME COMPARISON (lower is better)
    5.21s |     178.6 tok/s | deepseek-ai/DeepSeek-V3.1-turbo | ████████████████████████████████████████████████
   11.30s |      72.9 tok/s | glm-4.5                                | ████████████████████████████████████░░░░░░░░░
   11.47s |      81.5 tok/s | zai-org/GLM-4.5-turbo                   | ████████████████████████████████████░░░░░░░░░
 
-⚡ TOKENS PER SECOND COMPARISON (higher is better)
+TOKENS PER SECOND COMPARISON (higher is better)
      178.6 tok/s |    5.21s | deepseek-ai/DeepSeek-V3.1-turbo | █████████████████████████████████████████████████████
       81.5 tok/s |   11.47s | zai-org/GLM-4.5-turbo                   | ████████████████████████████████░░░░░░░░░░░░░░░░
       72.9 tok/s |   11.30s | glm-4.5                                | ████████████████████████████████░░░░░░░░░░░░░░░░
 
-🎉 Benchmark completed!
+Benchmark completed!
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Adding Providers (Arrow Key Navigation)
 
 #### OpenAI-Compatible Providers
 ```
-➕ Add New Provider
+Add New Provider
 
 Use ↑↓ arrows to navigate, ENTER to select
 Navigation is circular
@@ -118,7 +118,7 @@ Enter model name (e.g., claude-3-sonnet-20240229):
 ```
 
 
-## ⚡ Performance Metrics Explained
+## Performance Metrics Explained
 
 ### Core Metrics
 - **Total Time**: Complete request duration (seconds)
@@ -134,7 +134,7 @@ Enter model name (e.g., claude-3-sonnet-20240229):
 - **Color Coding**: Red bars for time (lower is better), green for performance (higher is better)
 - **Dynamic Scaling**: Bars scale proportionally to the best/worst performers
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **AI SDK**: Vercel AI SDK with streaming support ( opencode uses it too)
 - **Table Rendering**: `cli-table3` for professional tables
@@ -144,7 +144,7 @@ Enter model name (e.g., claude-3-sonnet-20240229):
 - **Configuration**: JSON-based persistent storage
 - **Security**: .gitignore protection for sensitive files
 
-## 🎯 Requirements
+## Requirements
 
 - Node.js 18+
 - API keys for AI providers
@@ -152,7 +152,7 @@ Enter model name (e.g., claude-3-sonnet-20240229):
 - Git (for security configuration)
 
 
-## 📝 Advanced Features
+## Advanced Features
 
 ### Parallel Execution
 - **Speed**: Runs all selected models simultaneously
