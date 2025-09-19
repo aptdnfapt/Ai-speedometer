@@ -135,12 +135,14 @@ After setting up, run the CLI and check that your providers appear in the model 
 ```
 Ai-speedometer
 =============================
+Note: opencode uses ai-sdk
 
 Use ↑↓ arrows to navigate, ENTER to select
 Navigation is circular
 
 ● Set Model
-○ Run Benchmark  
+○ Run Benchmark (AI SDK)
+○ Run Benchmark (REST API)
 ○ Exit
 ```
 
@@ -182,8 +184,10 @@ Available Providers
 ```
 BENCHMARK RESULTS
 =========================
+Method: AI SDK
 
 COMPREHENSIVE PERFORMANCE SUMMARY
+Note: AI SDK method does not count thinking tokens as first token. REST API method does not use streaming.
 ┌─────────────────────────┬─────────────────────┬─────────────────┬────────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐
 │ Model                  │ Provider            │ Total Time(s)   │ TTFT(s)    │ Tokens/Sec     │ Output Tokens   │ Prompt Tokens   │ Total Tokens    │
 ├─────────────────────────┼─────────────────────┼─────────────────┼────────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤
@@ -239,11 +243,15 @@ Enter model name (e.g., claude-3-sonnet-20240229):
 
 ### Core Metrics
 - **Total Time**: Complete request duration (seconds)
-- **Time to First Token (TTFT)**: Latency until first streaming token arrives
+- **Time to First Token (TTFT)**: Latency until first streaming token arrives (0 for REST API since it doesn't use streaming)
 - **Tokens per Second**: Real-time throughput calculation
 - **Output Tokens**: Number of tokens in the AI response
 - **Prompt Tokens**: Number of tokens in the input prompt
 - **Total Tokens**: Combined prompt + output tokens
+
+### Benchmark Methods
+- **AI SDK Method**: Uses streaming with Vercel AI SDK, doesn't count thinking tokens as first token
+- **REST API Method**: Uses direct HTTP calls, no streaming, TTFT is always 0
 
 ### Chart Features
 - **Dual Comparison Charts**: Both time and performance perspectives
@@ -253,7 +261,7 @@ Enter model name (e.g., claude-3-sonnet-20240229):
 
 ## Tech Stack
 
-- **AI SDK**: Vercel AI SDK with streaming support ( opencode uses it too)
+- **AI SDK**: Vercel AI SDK with streaming support (opencode uses it)
 - **Table Rendering**: `cli-table3` for professional tables
 - **Providers**: OpenAI-compatible and Anthropic APIs with custom baseUrl support
 - **Navigation**: Circular arrow key navigation throughout
