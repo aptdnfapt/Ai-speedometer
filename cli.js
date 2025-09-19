@@ -436,10 +436,8 @@ async function displayColorfulResults(results, method = 'AI SDK') {
   console.log(colorText('COMPREHENSIVE PERFORMANCE SUMMARY', 'yellow'));
   
   // Add note about method differences
-  console.log(colorText('Note: ', 'cyan') + colorText('AI SDK method does not count thinking tokens as first token. REST API method does not use streaming.', 'dim'));
-  if (method === 'REST API') {
-    console.log(colorText('       ', 'cyan') + colorText('That\'s why TTFT is 0 for REST API method.', 'dim'));
-  }
+  console.log(colorText('Note: ', 'cyan') + colorText('Benchmark over REST API doesn\'t utilize streaming, so TTFT is 0. AI SDK utilizes streaming, but', 'dim'));
+  console.log(colorText('      ', 'cyan') + colorText('if the model is a thinking model, TTFT will be much higher because thinking tokens are not counted as first token.', 'dim'));
   console.log('');
   
   const table = new Table({
