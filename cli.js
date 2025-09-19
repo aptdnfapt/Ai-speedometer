@@ -6,6 +6,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { anthropic } from '@ai-sdk/anthropic';
 import { streamText } from 'ai';  // Changed from streamText to generateText
 import { testPrompt } from './test-prompt.js';
+import { LLMBenchmark, ParallelBenchmark } from './benchmark-rest.js';
 import 'dotenv/config';
 import Table from 'cli-table3';
 
@@ -67,6 +68,7 @@ function clearScreen() {
 function showHeader() {
   console.log(colorText('Ai-speedometer', 'cyan'));
   console.log(colorText('=============================', 'cyan'));
+  console.log(colorText('Note: opencode uses ai-sdk', 'dim'));
   console.log('');
 }
 
@@ -408,15 +410,17 @@ async function runStreamingBenchmark(models) {
   console.log('');
   console.log(colorText('All benchmarks completed!', 'green'));
   
-  await displayColorfulResults(results);
+  await displayColorfulResults(results, 'AI SDK');
 }
 
 // Colorful results display with comprehensive table and enhanced bars
-async function displayColorfulResults(results) {
+async function displayColorfulResults(results, method = 'AI SDK') {
   clearScreen();
   showHeader();
   console.log(colorText('BENCHMARK RESULTS', 'magenta'));
   console.log(colorText('=========================', 'magenta'));
+  console.log('');
+  console.log(colorText('Method: ', 'cyan') + colorText(method, 'yellow'));
   console.log('');
   
   // Filter successful results for table
@@ -430,6 +434,13 @@ async function displayColorfulResults(results) {
   
   // Create comprehensive table
   console.log(colorText('COMPREHENSIVE PERFORMANCE SUMMARY', 'yellow'));
+  
+  // Add note about method differences
+  console.log(colorText('Note: ', 'cyan') + colorText('AI SDK method does not count thinking tokens as first token. REST API method does not use streaming.', 'dim'));
+  if (method === 'REST API') {
+    console.log(colorText('       ', 'cyan') + colorText('That\'s why TTFT is 0 for REST API method.', 'dim'));
+  }
+  console.log('');
   
   const table = new Table({
     head: [
@@ -731,17 +742,95 @@ async function addModelToProvider() {
   await question(colorText('\nPress Enter to continue...', 'yellow'));
 }
 
+// REST API benchmark function using the existing benchmark-rest.js classes
+async function runRestApiBenchmark(models) {
+  if (models.length === 0) {
+    console.log(colorText('No models selected for benchmarking.', 'red'));
+    return;
+  }
+  
+  clearScreen();
+  showHeader();
+  console.log(colorText('Running REST API Benchmark...', 'green'));
+  console.log(colorText(`Running ${models.length} models in parallel...`, 'cyan'));
+  console.log(colorText('Note: This uses direct REST API calls instead of AI SDK', 'dim'));
+  console.log('');
+  
+  // Create a function to benchmark a single model using REST API
+  const benchmarkModelRest = async (model) => {
+    console.log(colorText(`Testing ${model.name} (${model.providerName}) via REST API...`, 'yellow'));
+    
+    try {
+      const startTime = Date.now();
+      const benchmark = new LLMBenchmark(model.providerName, model.name);
+      const result = await benchmark.runBenchmarkForResults();
+      const endTime = Date.now();
+      
+      const totalTime = endTime - startTime;
+      
+      // Convert REST API result to match the AI SDK format
+      console.log(colorText('Completed!', 'green'));
+      console.log(colorText(`  Total Time: ${(totalTime / 1000).toFixed(2)}s`, 'cyan'));
+      console.log(colorText(`  Tokens/Sec: ${result.tokensPerSecond.toFixed(1)}`, 'cyan'));
+      
+      return {
+        model: model.name,
+        provider: model.providerName,
+        totalTime: totalTime,
+        timeToFirstToken: 0, // REST API doesn't track TTFT
+        tokenCount: result.totalTokens,
+        tokensPerSecond: result.tokensPerSecond,
+        promptTokens: Math.round(testPrompt.length / 4), // Estimate based on prompt length
+        totalTokens: result.totalTokens,
+        success: result.success,
+        error: result.error
+      };
+      
+    } catch (error) {
+      console.log(colorText('Failed: ', 'red') + error.message);
+      return {
+        model: model.name,
+        provider: model.providerName,
+        totalTime: 0,
+        timeToFirstToken: 0,
+        tokenCount: 0,
+        tokensPerSecond: 0,
+        promptTokens: 0,
+        totalTokens: 0,
+        success: false,
+        error: error.message
+      };
+    }
+  };
+  
+  // Run all benchmarks in parallel
+  console.log(colorText('Starting parallel REST API benchmark execution...', 'cyan'));
+  const promises = models.map(model => benchmarkModelRest(model));
+  const results = await Promise.all(promises);
+  
+  console.log('');
+  console.log(colorText('All REST API benchmarks completed!', 'green'));
+  
+  await displayColorfulResults(results, 'REST API');
+}
+
 // Main menu with arrow key navigation
 async function showMainMenu() {
   const menuOptions = [
     { id: 1, text: 'Set Model', action: () => showModelMenu() },
-    { id: 2, text: 'Run Benchmark', action: async () => {
+    { id: 2, text: 'Run Benchmark (AI SDK)', action: async () => {
       const selectedModels = await selectModelsCircular();
       if (selectedModels.length > 0) {
         await runStreamingBenchmark(selectedModels);
       }
     }},
-    { id: 3, text: 'Exit', action: () => {
+    { id: 3, text: 'Run Benchmark (REST API)', action: async () => {
+      const selectedModels = await selectModelsCircular();
+      if (selectedModels.length > 0) {
+        await runRestApiBenchmark(selectedModels);
+      }
+    }},
+    { id: 4, text: 'Exit', action: () => {
       console.log(colorText('Goodbye!', 'green'));
       rl.close();
       process.exit(0);
