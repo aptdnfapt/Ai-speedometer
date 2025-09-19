@@ -55,7 +55,9 @@ class LLMBenchmark {
   }
 
   async makeApiCall() {
-    const url = `${this.provider.baseUrl}/chat/completions`;
+    // Use correct endpoint based on provider type
+    const endpoint = this.provider.type === 'anthropic' ? '/v1/messages' : '/chat/completions';
+    const url = `${this.provider.baseUrl}${endpoint}`;
     
     const headers = {
       'Content-Type': 'application/json',
