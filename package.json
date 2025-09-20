@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "cli": "node cli.js",
+    "cli:debug": "node cli.js --debug",
     "benchmark": "node benchmark-rest.js",
     "benchmark-all": "node benchmark-rest.js --all",
     "benchmark-track": "node benchmark-rest.js --all --track",

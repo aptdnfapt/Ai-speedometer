@@ -3,19 +3,62 @@
 import readline from 'readline';
 import fs from 'fs';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { anthropic } from '@ai-sdk/anthropic';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { streamText } from 'ai';  // Changed from streamText to generateText
 import { testPrompt } from './test-prompt.js';
 import { LLMBenchmark, ParallelBenchmark } from './benchmark-rest.js';
 import 'dotenv/config';
 import Table from 'cli-table3';
 
+// Check for debug flag
+const debugMode = process.argv.includes('--debug');
+let logFile = null;
+
+function log(message) {
+  if (!debugMode) return;
+  
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${message}\n`;
+  
+  if (!logFile) {
+    logFile = fs.createWriteStream('debug.log', { flags: 'w' });
+  }
+  
+  logFile.write(logMessage);
+  // Only print to console for important messages
+  if (message.includes('ERROR') || message.includes('Creating') || message.includes('API Request')) {
+    console.log(logMessage.trim());
+  }
+}
+
 // Create a custom Anthropic provider function that supports baseUrl
 function createAnthropicProvider(baseUrl, apiKey) {
-  return anthropic({
+  // Use createAnthropic instead of default anthropic for custom baseURL support
+  log(`Creating Anthropic provider with baseUrl: ${baseUrl}`);
+  log(`API Key length: ${apiKey ? apiKey.length : 0}`);
+  
+  // Ensure base URL ends with /v1 for AI SDK compatibility
+  let normalizedBaseUrl = baseUrl;
+  if (!baseUrl.endsWith('/v1')) {
+    normalizedBaseUrl = baseUrl.endsWith('/') ? `${baseUrl}v1` : `${baseUrl}/v1`;
+    log(`Normalized base URL to: ${normalizedBaseUrl}`);
+  }
+  
+  // Try with baseURL parameter (correct according to docs)
+  const provider = createAnthropic({
     apiKey: apiKey,
-    baseUrl: baseUrl
+    baseURL: normalizedBaseUrl,
+    // Add minimal fetch logging for debugging
+    fetch: debugMode ? async (input, init) => {
+      log(`API Request to: ${input}`);
+      const response = await fetch(input, init);
+      log(`Response status: ${response.status}`);
+      return response;
+    } : undefined
   });
+  
+  log(`Provider created successfully: ${provider ? 'yes' : 'no'}`);
+  return provider;
 }
 
 const rl = readline.createInterface({
@@ -318,6 +361,10 @@ async function runStreamingBenchmark(models) {
       let tokenCount = 0;
       let startTime = Date.now();
       
+      log(`Model provider type: ${model.providerType}`);
+      log(`Model provider config baseUrl: ${model.providerConfig.baseUrl}`);
+      log(`Model provider config apiKey: ${model.providerConfig.apiKey ? '***' + model.providerConfig.apiKey.slice(-4) : 'missing'}`);
+      
       const result = streamText({
         ...(model.providerType === 'openai-compatible' ? {
           model: createOpenAICompatible({
@@ -344,10 +391,24 @@ async function runStreamingBenchmark(models) {
       
       // Consume the stream and count tokens manually
       let fullText = '';
-      for await (const textPart of result.textStream) {
-        fullText += textPart;
-        // Manual token count estimation as fallback
-        tokenCount = Math.round(fullText.length / 4); // Rough estimate
+      try {
+        for await (const textPart of result.textStream) {
+          fullText += textPart;
+          // Manual token count estimation as fallback
+          tokenCount = Math.round(fullText.length / 4); // Rough estimate
+        }
+        log(`Stream completed successfully. Total tokens: ${tokenCount}`);
+      } catch (error) {
+        log(`Stream error: ${error.message}`);
+        log(`Error stack: ${error.stack}`);
+        throw error;
+      }
+      
+      // Close log file when done
+      if (debugMode) {
+        process.on('exit', () => {
+          if (logFile) logFile.end();
+        });
       }
       
       const endTime = Date.now();

@@ -2,3 +2,4 @@ node_modules
 ai-benchmark-config.json
 .env
 *.key
+debug.log

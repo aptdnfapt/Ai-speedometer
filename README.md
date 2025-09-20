@@ -11,6 +11,13 @@ npm install
 # Set up your API keys and providers (see Setup Guide below)
 # Start the CLI
 npm run cli
+
+
+```
+Debug 
+```bash
+# Start with debug logging (for troubleshooting)
+npm run cli:debug
 ```
 
 ## Setup Guide
@@ -128,6 +135,7 @@ After setting up, run the CLI and check that your providers appear in the model 
 - **"Model not available"**: Verify the model name is correct for your provider
 - **"Connection failed"**: Ensure your base URL is accessible and you have internet access
 - **"Invalid API key"**: Double-check your API key is correct and has proper permissions
+- **Debug Mode**: Use `npm run cli:debug` to enable detailed logging. This creates a `debug.log` file with API request/response details for troubleshooting connection issues.
 
 ## Usage Examples
 
@@ -230,13 +238,15 @@ Select provider type:
 ○ Back to main menu
 ```
 
-#### Anthropic Providers (Now Supports baseUrl)
+#### Anthropic Providers (Now Supports Custom Base URLs)
 ```
 Enter provider name (e.g., MyAnthropic):
 Enter base URL (e.g., https://api.anthropic.com):
 Enter Anthropic API key: [your-key]
 Enter model name (e.g., claude-3-sonnet-20240229):
 ```
+
+**Note**: The system automatically handles `/v1` path requirements for custom Anthropic endpoints. If you encounter issues with custom base URLs, run `npm run cli:debug` to see detailed API request logs.
 
 
 ## Performance Metrics Explained
@@ -268,6 +278,7 @@ Enter model name (e.g., claude-3-sonnet-20240229):
 - **Colors**: ANSI escape codes for terminal styling
 - **Configuration**: JSON-based persistent storage
 - **Security**: .gitignore protection for sensitive files
+- **Debug Logging**: Built-in debugging system for troubleshooting API connections
 
 ## Requirements
 
