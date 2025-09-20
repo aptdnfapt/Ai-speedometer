@@ -459,8 +459,11 @@ async function displayColorfulResults(results, method = 'AI SDK') {
     }
   });
   
-  // Add data rows
-  successfulResults.forEach(result => {
+  // Sort results by tokens per second (descending) for table ranking
+  const sortedResults = [...successfulResults].sort((a, b) => b.tokensPerSecond - a.tokensPerSecond);
+  
+  // Add data rows (already ranked by sort order)
+  sortedResults.forEach((result) => {
     table.push([
       colorText(result.model, 'white'),
       colorText(result.provider, 'white'),
@@ -476,54 +479,90 @@ async function displayColorfulResults(results, method = 'AI SDK') {
   console.log(table.toString());
   console.log('');
   
-  // Enhanced performance comparison charts
+  // Enhanced performance comparison charts with ranking and provider sections
   console.log(colorText('PERFORMANCE COMPARISON CHARTS', 'yellow'));
   console.log(colorText('─'.repeat(80), 'dim'));
   console.log('');
   
-  // Time comparison chart
-  console.log(colorText('TOTAL TIME COMPARISON (lower is better)', 'cyan'));
-  const maxTime = Math.max(...successfulResults.map(r => r.totalTime));
-  const maxModelLength = Math.max(...successfulResults.map(r => r.model.length));
-  
+  // Group results by provider
+  const providerGroups = {};
   successfulResults.forEach(result => {
+    if (!providerGroups[result.provider]) {
+      providerGroups[result.provider] = [];
+    }
+    providerGroups[result.provider].push(result);
+  });
+  
+  // Calculate consistent column widths for both charts
+  const maxModelLength = Math.max(...successfulResults.map(r => r.model.length));
+  const maxProviderLength = Math.max(...successfulResults.map(r => r.provider.length));
+  const maxTimeLength = 8; // "99.99s"
+  const maxTpsLength = 12; // "999.9 tok/s"
+  const maxRankLength = 6; // "1st", "2nd", "3rd", "4th", etc.
+  
+  // Time comparison chart - ranked by fastest (lowest time first)
+  console.log(colorText('TOTAL TIME RANKING (fastest at top - lower is better)', 'cyan'));
+  const timeSortedResults = [...successfulResults].sort((a, b) => a.totalTime - b.totalTime);
+  const maxTime = Math.max(...successfulResults.map(r => r.totalTime));
+  
+  timeSortedResults.forEach((result, index) => {
+    const rank = index + 1;
     const barLength = Math.floor((result.totalTime / maxTime) * 25);
     const bar = colorText('█'.repeat(barLength), 'red') + colorText('░'.repeat(25 - barLength), 'dim');
     const timeDisplay = (result.totalTime / 1000).toFixed(2) + 's';
     const tpsDisplay = result.tokensPerSecond.toFixed(1) + ' tok/s';
     
+    // Rank badges
+    const rankBadge = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
+    
     console.log(
-      colorText(timeDisplay.padStart(8), 'red') + 
+      colorText(rankBadge.padStart(maxRankLength), rank === 1 ? 'yellow' : rank === 2 ? 'white' : rank === 3 ? 'bright' : 'white') +
       colorText(' | ', 'dim') + 
-      colorText(tpsDisplay.padStart(12), 'magenta') + 
+      colorText(timeDisplay.padStart(maxTimeLength), 'red') + 
+      colorText(' | ', 'dim') + 
+      colorText(tpsDisplay.padStart(maxTpsLength), 'magenta') + 
       colorText(' | ', 'dim') + 
       colorText(result.model.padEnd(maxModelLength), 'white') + 
+      colorText(' | ', 'dim') + 
+      colorText(result.provider.padEnd(maxProviderLength), 'cyan') +
       colorText(' | ', 'dim') + 
       bar
     );
   });
   
   console.log('');
-  console.log(colorText('TOKENS PER SECOND COMPARISON (higher is better)', 'cyan'));
   
+  // Tokens per second comparison - ranked by highest TPS first
+  console.log(colorText('TOKENS PER SECOND RANKING (fastest at top - higher is better)', 'cyan'));
+  const tpsSortedResults = [...successfulResults].sort((a, b) => b.tokensPerSecond - a.tokensPerSecond);
   const maxTps = Math.max(...successfulResults.map(r => r.tokensPerSecond));
   
-  successfulResults.forEach(result => {
+  tpsSortedResults.forEach((result, index) => {
+    const rank = index + 1;
     const barLength = Math.floor((result.tokensPerSecond / maxTps) * 25);
     const bar = colorText('█'.repeat(barLength), 'green') + colorText('░'.repeat(25 - barLength), 'dim');
     const timeDisplay = (result.totalTime / 1000).toFixed(2) + 's';
     const tpsDisplay = result.tokensPerSecond.toFixed(1) + ' tok/s';
     
+    // Rank badges
+    const rankBadge = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}.`;
+    
     console.log(
-      colorText(tpsDisplay.padStart(12), 'green') + 
+      colorText(rankBadge.padStart(maxRankLength), rank === 1 ? 'yellow' : rank === 2 ? 'white' : rank === 3 ? 'bright' : 'white') +
       colorText(' | ', 'dim') + 
-      colorText(timeDisplay.padStart(8), 'red') + 
+      colorText(tpsDisplay.padStart(maxTpsLength), 'green') + 
+      colorText(' | ', 'dim') + 
+      colorText(timeDisplay.padStart(maxTimeLength), 'red') + 
       colorText(' | ', 'dim') + 
       colorText(result.model.padEnd(maxModelLength), 'white') + 
+      colorText(' | ', 'dim') + 
+      colorText(result.provider.padEnd(maxProviderLength), 'cyan') +
       colorText(' | ', 'dim') + 
       bar
     );
   });
+  
+  console.log('');
   
   console.log('');
   

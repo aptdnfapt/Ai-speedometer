@@ -4,6 +4,24 @@ import fs from 'fs';
 import { spawn } from 'child_process';
 import { testPrompt } from './test-prompt.js';
 
+// ANSI color codes for enhanced display
+const colors = {
+  reset: '\x1b[0m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  bright: '\x1b[1m',
+  dim: '\x1b[2m'
+};
+
+function colorText(text, color) {
+  return `${colors[color]}${text}${colors.reset}`;
+}
+
 class LLMBenchmark {
   constructor(providerName, modelName) {
     this.providerName = providerName;
@@ -217,36 +235,49 @@ class ParallelBenchmark {
   }
 
   displayResultsTable(results) {
-    // Sort results by tokens per second (descending)
+    // Sort results by tokens per second (descending) - fastest at top
     const sortedResults = results.sort((a, b) => b.tokensPerSecond - a.tokensPerSecond);
 
     // Calculate column widths
+    const rankWidth = 6;
     const providerWidth = Math.max(...sortedResults.map(r => r.provider.length), 'Provider'.length);
     const modelWidth = Math.max(...sortedResults.map(r => r.model.length), 'Model'.length);
     const tokensWidth = 12;
     const tpsWidth = 15;
 
     // Table header
-    const header = `| ${'Provider'.padEnd(providerWidth)} | ${'Model'.padEnd(modelWidth)} | ${'Total Tokens'.padStart(tokensWidth)} | ${'Tokens/sec'.padStart(tpsWidth)} |`;
-    const separator = `| ${'-'.repeat(providerWidth)} | ${'-'.repeat(modelWidth)} | ${'-'.repeat(tokensWidth)} | ${'-'.repeat(tpsWidth)} |`;
+    const header = `| ${'Rank'.padStart(rankWidth)} | ${'Provider'.padEnd(providerWidth)} | ${'Model'.padEnd(modelWidth)} | ${'Total Tokens'.padStart(tokensWidth)} | ${'Tokens/sec'.padStart(tpsWidth)} |`;
+    const separator = `| ${'-'.repeat(rankWidth)} | ${'-'.repeat(providerWidth)} | ${'-'.repeat(modelWidth)} | ${'-'.repeat(tokensWidth)} | ${'-'.repeat(tpsWidth)} |`;
 
+    console.log('');
+    console.log(colorText('PERFORMANCE RANKINGS - Fastest at Top', 'cyan'));
     console.log(header);
     console.log(separator);
 
-    // Table rows
-    sortedResults.forEach(result => {
+    // Table rows with ranking
+    sortedResults.forEach((result, index) => {
+      const rank = index + 1;
+      const rankCol = rank.toString().padStart(rankWidth);
+      
       if (result.success) {
         const providerCol = result.provider.padEnd(providerWidth);
         const modelCol = result.model.padEnd(modelWidth);
         const tokensCol = result.totalTokens.toString().padStart(tokensWidth);
         const tpsCol = result.tokensPerSecond.toString().padStart(tpsWidth);
-        console.log(`| ${providerCol} | ${modelCol} | ${tokensCol} | ${tpsCol} |`);
+        
+        // Add special formatting for top 3
+        let rankDisplay = rankCol;
+        if (rank === 1) rankDisplay = colorText('1st', 'yellow') + rankCol.slice(3);
+        else if (rank === 2) rankDisplay = colorText('2nd', 'white') + rankCol.slice(3);
+        else if (rank === 3) rankDisplay = colorText('3rd', 'bright') + rankCol.slice(3);
+        
+        console.log(`| ${rankDisplay} | ${providerCol} | ${modelCol} | ${tokensCol} | ${tpsCol} |`);
       } else {
         const providerCol = result.provider.padEnd(providerWidth);
         const modelCol = result.model.padEnd(modelWidth);
         const tokensCol = 'ERROR'.padStart(tokensWidth);
         const tpsCol = 'FAILED'.padStart(tpsWidth);
-        console.log(`| ${providerCol} | ${modelCol} | ${tokensCol} | ${tpsCol} |`);
+        console.log(`| ${rankCol} | ${providerCol} | ${modelCol} | ${tokensCol} | ${tpsCol} |`);
       }
     });
 
@@ -257,25 +288,61 @@ class ParallelBenchmark {
     const successful = results.filter(r => r.success);
     const failed = results.filter(r => !r.success);
 
-    console.log('=== Summary ===');
-    console.log(`Total benchmarks: ${results.length}`);
-    console.log(`Successful: ${successful.length}`);
-    console.log(`Failed: ${failed.length}`);
+    console.log(colorText('=== SUMMARY ===', 'cyan'));
+    console.log(colorText(`Total benchmarks: ${results.length}`, 'white'));
+    console.log(colorText(`Successful: ${successful.length}`, 'green'));
+    console.log(colorText(`Failed: ${failed.length}`, 'red'));
 
     if (successful.length > 0) {
       const avgTps = successful.reduce((sum, r) => sum + r.tokensPerSecond, 0) / successful.length;
       const fastest = successful.reduce((max, r) => r.tokensPerSecond > max.tokensPerSecond ? r : max);
       const slowest = successful.reduce((min, r) => r.tokensPerSecond < min.tokensPerSecond ? r : min);
 
-      console.log(`Average tokens/sec: ${avgTps.toFixed(2)}`);
-      console.log(`Fastest: ${fastest.provider}/${fastest.model} (${fastest.tokensPerSecond} tokens/sec)`);
-      console.log(`Slowest: ${slowest.provider}/${slowest.model} (${slowest.tokensPerSecond} tokens/sec)`);
+      console.log(colorText(`Average tokens/sec: ${avgTps.toFixed(2)}`, 'yellow'));
+      console.log(colorText(`Fastest: ${fastest.provider}/${fastest.model} (${fastest.tokensPerSecond} tokens/sec)`, 'green'));
+      console.log(colorText(`Slowest: ${slowest.provider}/${slowest.model} (${slowest.tokensPerSecond} tokens/sec)`, 'red'));
     }
 
     if (failed.length > 0) {
-      console.log('\nFailed benchmarks:');
+      console.log(colorText('\nFailed benchmarks:', 'red'));
       failed.forEach(result => {
-        console.log(`  ${result.provider}/${result.model}: ${result.error}`);
+        console.log(colorText(`  FAILED ${result.provider}/${result.model}: ${result.error}`, 'red'));
+      });
+    }
+    
+    // Add provider performance summary
+    if (successful.length > 0) {
+      console.log(colorText('\n=== PROVIDER PERFORMANCE ===', 'cyan'));
+      const providerStats = {};
+      
+      successful.forEach(result => {
+        if (!providerStats[result.provider]) {
+          providerStats[result.provider] = {
+            totalTps: 0,
+            count: 0,
+            models: []
+          };
+        }
+        providerStats[result.provider].totalTps += result.tokensPerSecond;
+        providerStats[result.provider].count += 1;
+        providerStats[result.provider].models.push(result);
+      });
+      
+      // Sort providers by average performance
+      const sortedProviders = Object.entries(providerStats)
+        .map(([provider, stats]) => ({
+          provider,
+          avgTps: stats.totalTps / stats.count,
+          modelCount: stats.count,
+          models: stats.models
+        }))
+        .sort((a, b) => b.avgTps - a.avgTps);
+      
+      sortedProviders.forEach((providerStat, index) => {
+        const rank = index + 1;
+        const rankText = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
+        console.log(colorText(`${rankText} ${providerStat.provider}: ${providerStat.avgTps.toFixed(2)} avg tokens/sec (${providerStat.modelCount} models)`, 
+          rank === 1 ? 'yellow' : rank === 2 ? 'white' : rank === 3 ? 'bright' : 'white'));
       });
     }
   }
