@@ -20,6 +20,7 @@
     "@ai-sdk/openai-compatible": "^1.0.17",
     "ai": "^5.0.44",
     "cli-table3": "^0.6.5",
-    "dotenv": "^17.2.2"
+    "dotenv": "^17.2.2",
+    "jsonc-parser": "^3.3.1"
   }
 }

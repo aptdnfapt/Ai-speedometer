@@ -1,1 +1,1 @@
-export const testPrompt = "Explain quantum computing in comprehensive in 500 words";
+export const testPrompt = `make a 300 word story`;

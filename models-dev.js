@@ -1,0 +1,222 @@
+import fs from 'fs';
+import path from 'path';
+import { homedir } from 'os';
+
+// Cache directory and file paths
+const CACHE_DIR = path.join(homedir(), '.cache', 'ai-speedometer');
+const CACHE_FILE = path.join(CACHE_DIR, 'models.json');
+
+// Fallback data (baked-in at build time)
+const FALLBACK_PROVIDERS = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    type: 'openai-compatible',
+    models: [
+      { id: 'gpt-4o', name: 'GPT-4o' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+      { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
+      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' }
+    ]
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    baseUrl: 'https://api.anthropic.com',
+    type: 'anthropic',
+    models: [
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
+      { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' }
+    ]
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    type: 'openai-compatible',
+    models: [
+      { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+      { id: 'openai/gpt-4o', name: 'GPT-4o' },
+      { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' }
+    ]
+  }
+];
+
+// Ensure cache directory exists
+function ensureCacheDir() {
+  try {
+    if (!fs.existsSync(CACHE_DIR)) {
+      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    }
+  } catch (error) {
+    console.warn('Warning: Could not create cache directory:', error.message);
+  }
+}
+
+// Check if cache is expired (1 hour)
+function isCacheExpired(cacheData) {
+  if (!cacheData.timestamp) return true;
+  const now = Date.now();
+  const cacheAge = now - cacheData.timestamp;
+  const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+  return cacheAge > oneHour;
+}
+
+// Load cached data
+function loadCache() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const data = fs.readFileSync(CACHE_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      
+      // Check if cache is expired
+      if (isCacheExpired(parsed)) {
+        return null;
+      }
+      
+      return parsed;
+    }
+  } catch (error) {
+    console.warn('Warning: Could not load cache:', error.message);
+  }
+  return null;
+}
+
+// Save data to cache
+function saveCache(data) {
+  try {
+    ensureCacheDir();
+    const cacheData = {
+      ...data,
+      timestamp: Date.now()
+    };
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheData, null, 2));
+  } catch (error) {
+    console.warn('Warning: Could not save cache:', error.message);
+  }
+}
+
+// Fetch data from models.dev API
+async function fetchFromAPI() {
+  try {
+    const response = await fetch('https://models.dev/api.json');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.warn('Warning: Could not fetch from models.dev API:', error.message);
+    return null;
+  }
+}
+
+// Transform models.dev data to our format
+function transformModelsDevData(apiData) {
+  if (!apiData) {
+    return FALLBACK_PROVIDERS;
+  }
+
+  // Transform the flat structure from models.dev to our expected format
+  const providers = [];
+  
+  for (const [, providerData] of Object.entries(apiData)) {
+    if (providerData.id && providerData.name && providerData.models) {
+      const provider = {
+        id: providerData.id,
+        name: providerData.name,
+        baseUrl: providerData.api || providerData.baseUrl || '',
+        type: providerData.npm ? 
+          (providerData.npm.includes('anthropic') ? 'anthropic' : 'openai-compatible') : 
+          'openai-compatible',
+        models: Object.values(providerData.models).map(model => ({
+          id: model.id,
+          name: model.name
+        }))
+      };
+      providers.push(provider);
+    }
+  }
+
+  return providers.length > 0 ? providers : FALLBACK_PROVIDERS;
+}
+
+// Get all providers (with caching and fallback)
+async function getAllProviders() {
+  // Try to load from cache first
+  const cachedData = loadCache();
+  if (cachedData && cachedData.providers) {
+    return cachedData.providers;
+  }
+
+  // Try to fetch from API
+  const apiData = await fetchFromAPI();
+  if (apiData) {
+    const transformedData = transformModelsDevData(apiData);
+    saveCache({ providers: transformedData });
+    return transformedData;
+  }
+
+  // Fallback to built-in data
+  return FALLBACK_PROVIDERS;
+}
+
+// Search providers by query
+async function searchProviders(query) {
+  const providers = await getAllProviders();
+  const lowercaseQuery = query.toLowerCase();
+  
+  return providers.filter(provider => 
+    provider.name.toLowerCase().includes(lowercaseQuery) ||
+    provider.id.toLowerCase().includes(lowercaseQuery)
+  );
+}
+
+// Get models for a specific provider
+async function getModelsForProvider(providerId) {
+  const providers = await getAllProviders();
+  const provider = providers.find(p => p.id === providerId);
+  return provider ? provider.models : [];
+}
+
+// Force refresh data from API
+async function refreshData() {
+  const apiData = await fetchFromAPI();
+  if (apiData) {
+    const transformedData = transformModelsDevData(apiData);
+    saveCache({ providers: transformedData });
+    return transformedData;
+  }
+  
+  // If API fails, try to use cached data
+  const cachedData = loadCache();
+  if (cachedData && cachedData.providers) {
+    return cachedData.providers;
+  }
+  
+  // Ultimate fallback
+  return FALLBACK_PROVIDERS;
+}
+
+// Clear cache
+function clearCache() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      fs.unlinkSync(CACHE_FILE);
+    }
+  } catch (error) {
+    console.warn('Warning: Could not clear cache:', error.message);
+  }
+}
+
+export {
+  getAllProviders,
+  searchProviders,
+  getModelsForProvider,
+  refreshData,
+  clearCache,
+  fetchFromAPI,
+  transformModelsDevData
+};
