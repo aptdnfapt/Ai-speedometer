@@ -155,7 +155,7 @@ export const getAuthenticatedProviders = async () => {
       authenticatedProviders.push({
         id: providerId,
         name: providerInfo.name,
-        type: 'verified',
+        type: providerInfo.type, // Use the actual provider type from models.dev
         baseUrl: providerInfo.baseUrl,
         apiKey: authInfo.key,
         authType: authInfo.type,

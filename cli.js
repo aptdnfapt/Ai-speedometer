@@ -232,6 +232,31 @@ async function selectModelsCircular() {
   let searchQuery = '';
   let filteredModels = [...allModels];
   
+  // Create a reusable filter function to avoid code duplication
+  const filterModels = (query) => {
+    if (!query.trim()) {
+      return [...allModels];
+    }
+    const lowercaseQuery = query.toLowerCase();
+    return allModels.filter(model => {
+      const modelNameMatch = model.name.toLowerCase().includes(lowercaseQuery);
+      const providerNameMatch = model.providerName.toLowerCase().includes(lowercaseQuery);
+      const providerIdMatch = model.providerId.toLowerCase().includes(lowercaseQuery);
+      const providerTypeMatch = model.providerType.toLowerCase().includes(lowercaseQuery);
+      
+      return modelNameMatch || providerNameMatch || providerIdMatch || providerTypeMatch;
+    });
+  };
+  
+  // Debounce function to reduce filtering frequency
+  let searchTimeout;
+  const debouncedFilter = (query, callback) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      callback(filterModels(query));
+    }, 50); // 50ms debounce delay
+  };
+  
   while (true) {
     // Build screen content in memory (double buffering)
     let screenContent = '';
@@ -355,15 +380,20 @@ async function selectModelsCircular() {
         allModels[actualModelIndex].selected = !allModels[actualModelIndex].selected;
       }
     } else if (key === '\r') {
-      // Enter - run benchmark on current model (quick single model)
+      // Enter - run benchmark on selected models
       const currentModel = filteredModels[currentIndex];
       if (currentModel) {
-        // Select just the current model and run benchmark
-        allModels.forEach(model => model.selected = false);
-        const actualModelIndex = allModels.indexOf(currentModel);
-        if (actualModelIndex !== -1) {
-          allModels[actualModelIndex].selected = true;
+        // Check if any models are already selected
+        const hasSelectedModels = allModels.some(model => model.selected);
+        
+        if (!hasSelectedModels) {
+          // If no models are selected, select just the current model (quick single model)
+          const actualModelIndex = allModels.indexOf(currentModel);
+          if (actualModelIndex !== -1) {
+            allModels[actualModelIndex].selected = true;
+          }
         }
+        // If models are already selected, keep them as is and run benchmark
         break;
       }
     } else if (key === '\u0003') {
@@ -373,18 +403,11 @@ async function selectModelsCircular() {
       // Backspace - delete character from search
       if (searchQuery.length > 0) {
         searchQuery = searchQuery.slice(0, -1);
-        // Filter models based on search query
-        const lowercaseQuery = searchQuery.toLowerCase();
-        filteredModels = allModels.filter(model => {
-          const modelNameMatch = model.name.toLowerCase().includes(lowercaseQuery);
-          const providerNameMatch = model.providerName.toLowerCase().includes(lowercaseQuery);
-          const providerIdMatch = model.providerId.toLowerCase().includes(lowercaseQuery);
-          const providerTypeMatch = model.providerType.toLowerCase().includes(lowercaseQuery);
-          
-          return modelNameMatch || providerNameMatch || providerIdMatch || providerTypeMatch;
+        debouncedFilter(searchQuery, (newFilteredModels) => {
+          filteredModels = newFilteredModels;
+          currentIndex = 0;
+          currentPage = 0;
         });
-        currentIndex = 0;
-        currentPage = 0;
       }
     } else if (key === 'A') {
       // Select all models - only when search is empty and Shift+A is pressed
@@ -398,13 +421,11 @@ async function selectModelsCircular() {
       } else {
         // If search is active, add 'A' to search query
         searchQuery += key;
-        const lowercaseQuery = searchQuery.toLowerCase();
-        filteredModels = allModels.filter(model => 
-          model.name.toLowerCase().includes(lowercaseQuery) ||
-          model.providerName.toLowerCase().includes(lowercaseQuery)
-        );
-        currentIndex = 0;
-        currentPage = 0;
+        debouncedFilter(searchQuery, (newFilteredModels) => {
+          filteredModels = newFilteredModels;
+          currentIndex = 0;
+          currentPage = 0;
+        });
       }
     } else if (key === 'N') {
       // Deselect all models (None) - only when search is empty and Shift+N is pressed
@@ -418,35 +439,28 @@ async function selectModelsCircular() {
       } else {
         // If search is active, add 'N' to search query
         searchQuery += key;
-        const lowercaseQuery = searchQuery.toLowerCase();
-        filteredModels = allModels.filter(model => 
-          model.name.toLowerCase().includes(lowercaseQuery) ||
-          model.providerName.toLowerCase().includes(lowercaseQuery)
-        );
-        currentIndex = 0;
-        currentPage = 0;
+        debouncedFilter(searchQuery, (newFilteredModels) => {
+          filteredModels = newFilteredModels;
+          currentIndex = 0;
+          currentPage = 0;
+        });
       }
     } else if (key === 'a' || key === 'n') {
       // Lowercase 'a' and 'n' go to search field (not select all/none)
       searchQuery += key;
-      const lowercaseQuery = searchQuery.toLowerCase();
-      filteredModels = allModels.filter(model => 
-        model.name.toLowerCase().includes(lowercaseQuery) ||
-        model.providerName.toLowerCase().includes(lowercaseQuery)
-      );
-      currentIndex = 0;
-      currentPage = 0;
+      debouncedFilter(searchQuery, (newFilteredModels) => {
+        filteredModels = newFilteredModels;
+        currentIndex = 0;
+        currentPage = 0;
+      });
     } else if (key === ' ' || key.length === 1) {
       // Spacebar or regular character - add to search query
       searchQuery += key;
-      // Filter models based on search query
-      const lowercaseQuery = searchQuery.toLowerCase();
-      filteredModels = allModels.filter(model => 
-        model.name.toLowerCase().includes(lowercaseQuery) ||
-        model.providerName.toLowerCase().includes(lowercaseQuery)
-      );
-      currentIndex = 0;
-      currentPage = 0;
+      debouncedFilter(searchQuery, (newFilteredModels) => {
+        filteredModels = newFilteredModels;
+        currentIndex = 0;
+        currentPage = 0;
+      });
     }
   }
   
