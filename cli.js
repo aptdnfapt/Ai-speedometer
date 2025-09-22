@@ -233,18 +233,25 @@ async function selectModelsCircular() {
   let filteredModels = [...allModels];
   
   while (true) {
-    clearScreen();
-    showHeader();
-    console.log(colorText('Select Models for Benchmark', 'magenta'));
-    console.log(colorText('Use ↑↓ arrows to navigate, SPACE to select/deselect, ENTER to confirm', 'cyan'));
-    console.log(colorText('Type to search (real-time filtering)', 'cyan'));
-    console.log(colorText('Press "A" to select all models, "N" to deselect all', 'cyan'));
-    console.log(colorText('Circle states: ●=Current+Selected  ○=Current+Unselected  ●=Selected  ○=Unselected', 'dim'));
-    console.log('');
+    // Build screen content in memory (double buffering)
+    let screenContent = '';
+    
+    // Add header
+    screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
+    screenContent += colorText('=============================', 'cyan') + '\n';
+    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Select Models for Benchmark', 'magenta') + '\n';
+    screenContent += colorText('Use ↑↓ arrows to navigate, SPACE to select/deselect, ENTER to confirm', 'cyan') + '\n';
+    screenContent += colorText('Type to search (real-time filtering)', 'cyan') + '\n';
+    screenContent += colorText('Press "A" to select all models, "N" to deselect all', 'cyan') + '\n';
+    screenContent += colorText('Circle states: ●=Current+Selected  ○=Current+Unselected  ●=Selected  ○=Unselected', 'dim') + '\n';
+    screenContent += '\n';
     
     // Search interface - always visible
-    console.log(colorText('Search: ', 'yellow') + colorText(searchQuery + '_', 'bright'));
-    console.log('');
+    screenContent += colorText('Search: ', 'yellow') + colorText(searchQuery + '_', 'bright') + '\n';
+    screenContent += '\n';
     
     // Calculate pagination
     const visibleItemsCount = getVisibleItemsCount(12); // Extra space for search bar
@@ -258,8 +265,8 @@ async function selectModelsCircular() {
     const endIndex = Math.min(startIndex + visibleItemsCount, filteredModels.length);
     
     // Display models in a vertical layout with pagination
-    console.log(colorText('Available Models:', 'yellow'));
-    console.log('');
+    screenContent += colorText('Available Models:', 'yellow') + '\n';
+    screenContent += '\n';
     
     for (let i = startIndex; i < endIndex; i++) {
       const model = filteredModels[i];
@@ -284,22 +291,26 @@ async function selectModelsCircular() {
       // Provider name
       let providerName = isCurrent ? colorText(`(${model.providerName})`, 'cyan') : colorText(`(${model.providerName})`, 'dim');
       
-      console.log(`${circle} ${modelName} ${providerName}`);
+      screenContent += `${circle} ${modelName} ${providerName}\n`;
     }
     
-    console.log('');
-    console.log(colorText(`Selected: ${allModels.filter(m => m.selected).length} models`, 'yellow'));
+    screenContent += '\n';
+    screenContent += colorText(`Selected: ${allModels.filter(m => m.selected).length} models`, 'yellow') + '\n';
     
     // Show pagination info
     if (totalPages > 1) {
       const pageInfo = colorText(`Page ${currentPage + 1}/${totalPages}`, 'cyan');
       const navHint = colorText('Use Page Up/Down to navigate pages', 'dim');
-      console.log(`${pageInfo} ${navHint}`);
+      screenContent += `${pageInfo} ${navHint}\n`;
       
       if (currentPage < totalPages - 1) {
-        console.log(colorText('↓ More models below', 'dim'));
+        screenContent += colorText('↓ More models below', 'dim') + '\n';
       }
     }
+    
+    // Clear screen and output entire buffer at once
+    clearScreen();
+    console.log(screenContent);
     
     const key = await getKeyPress();
     
@@ -816,17 +827,24 @@ async function addProvider() {
   }
   
   while (true) {
-    clearScreen();
-    showHeader();
-    console.log(colorText('Add Provider', 'magenta'));
-    console.log(colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan'));
-    console.log(colorText('Type to search (real-time filtering)', 'cyan'));
-    console.log(colorText('Navigation is circular', 'dim'));
-    console.log('');
+    // Build screen content in memory (double buffering)
+    let screenContent = '';
+    
+    // Add header
+    screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
+    screenContent += colorText('=============================', 'cyan') + '\n';
+    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Add Provider', 'magenta') + '\n';
+    screenContent += colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan') + '\n';
+    screenContent += colorText('Type to search (real-time filtering)', 'cyan') + '\n';
+    screenContent += colorText('Navigation is circular', 'dim') + '\n';
+    screenContent += '\n';
     
     // Search interface - always visible
-    console.log(colorText('Search: ', 'yellow') + colorText(searchQuery + '_', 'bright'));
-    console.log('');
+    screenContent += colorText('Search: ', 'yellow') + colorText(searchQuery + '_', 'bright') + '\n';
+    screenContent += '\n';
     
     // Calculate pagination
     const visibleItemsCount = getVisibleItemsCount();
@@ -841,8 +859,8 @@ async function addProvider() {
     const endIndex = Math.min(startIndex + visibleItemsCount, totalItems);
     
     // Display providers with pagination
-    console.log(colorText('Available Providers:', 'cyan'));
-    console.log('');
+    screenContent += colorText('Available Providers:', 'cyan') + '\n';
+    screenContent += '\n';
     
     // Show current page of providers
     for (let i = startIndex; i < endIndex && i < filteredProviders.length; i++) {
@@ -852,7 +870,7 @@ async function addProvider() {
       const providerName = isCurrent ? colorText(provider.name, 'bright') : colorText(provider.name, 'white');
       const providerType = isCurrent ? colorText(`(${provider.type})`, 'cyan') : colorText(`(${provider.type})`, 'dim');
       
-      console.log(`${indicator} ${providerName} ${providerType}`);
+      screenContent += `${indicator} ${providerName} ${providerType}\n`;
     }
     
     // Show "Add Custom Provider" option if it's on current page
@@ -862,20 +880,24 @@ async function addProvider() {
       const customIndicator = isCustomCurrent ? colorText('●', 'green') : colorText('○', 'dim');
       const customText = isCustomCurrent ? colorText('Add Custom Provider', 'bright') : colorText('Add Custom Provider', 'yellow');
       
-      console.log(`${customIndicator} ${customText}`);
+      screenContent += `${customIndicator} ${customText}\n`;
     }
     
     // Show pagination info
-    console.log('');
+    screenContent += '\n';
     if (totalPages > 1) {
       const pageInfo = colorText(`Page ${currentPage + 1}/${totalPages}`, 'cyan');
       const navHint = colorText('Use Page Up/Down to navigate pages', 'dim');
-      console.log(`${pageInfo} ${navHint}`);
+      screenContent += `${pageInfo} ${navHint}\n`;
       
       if (currentPage < totalPages - 1) {
-        console.log(colorText('↓ More items below', 'dim'));
+        screenContent += colorText('↓ More items below', 'dim') + '\n';
       }
     }
+    
+    // Clear screen and output entire buffer at once
+    clearScreen();
+    console.log(screenContent);
     
     const key = await getKeyPress();
     
@@ -1029,15 +1051,22 @@ async function addCustomProvider() {
   let selectedChoice = null;
   
   while (true) {
-    clearScreen();
-    showHeader();
-    console.log(colorText('Add Custom Provider', 'magenta'));
-    console.log(colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan'));
-    console.log(colorText('Navigation is circular', 'dim'));
-    console.log('');
+    // Build screen content in memory (double buffering)
+    let screenContent = '';
     
-    console.log(colorText('Select provider type:', 'cyan'));
-    console.log('');
+    // Add header
+    screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
+    screenContent += colorText('=============================', 'cyan') + '\n';
+    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Add Custom Provider', 'magenta') + '\n';
+    screenContent += colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan') + '\n';
+    screenContent += colorText('Navigation is circular', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Select provider type:', 'cyan') + '\n';
+    screenContent += '\n';
     
     // Display provider options with arrow key navigation
     providerOptions.forEach((option, index) => {
@@ -1045,8 +1074,12 @@ async function addCustomProvider() {
       const indicator = isCurrent ? colorText('●', 'green') : colorText('○', 'dim');
       const optionText = isCurrent ? colorText(option.text, 'bright') : colorText(option.text, 'yellow');
       
-      console.log(`${indicator} ${optionText}`);
+      screenContent += `${indicator} ${optionText}\n`;
     });
+    
+    // Clear screen and output entire buffer at once
+    clearScreen();
+    console.log(screenContent);
     
     const key = await getKeyPress();
     
@@ -1314,15 +1347,22 @@ async function addModelToProvider() {
   let currentIndex = 0;
   
   while (true) {
-    clearScreen();
-    showHeader();
-    console.log(colorText('Add Model to Provider', 'magenta'));
-    console.log(colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan'));
-    console.log(colorText('Navigation is circular', 'dim'));
-    console.log('');
+    // Build screen content in memory (double buffering)
+    let screenContent = '';
     
-    console.log(colorText('Select provider:', 'cyan'));
-    console.log('');
+    // Add header
+    screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
+    screenContent += colorText('=============================', 'cyan') + '\n';
+    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Add Model to Provider', 'magenta') + '\n';
+    screenContent += colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan') + '\n';
+    screenContent += colorText('Navigation is circular', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Select provider:', 'cyan') + '\n';
+    screenContent += '\n';
     
     // Display providers with arrow key navigation
     config.providers.forEach((provider, index) => {
@@ -1330,8 +1370,12 @@ async function addModelToProvider() {
       const indicator = isCurrent ? colorText('●', 'green') : colorText('○', 'dim');
       const providerName = isCurrent ? colorText(provider.name, 'bright') : colorText(provider.name, 'yellow');
       
-      console.log(`${indicator} ${providerName}`);
+      screenContent += `${indicator} ${providerName}\n`;
     });
+    
+    // Clear screen and output entire buffer at once
+    clearScreen();
+    console.log(screenContent);
     
     const key = await getKeyPress();
     
@@ -1583,12 +1627,19 @@ async function showMainMenu() {
   let currentIndex = 0;
   
   while (true) {
-    clearScreen();
-    showHeader();
-    console.log(colorText('Main Menu:', 'cyan'));
-    console.log(colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan'));
-    console.log(colorText('Navigation is circular', 'dim'));
-    console.log('');
+    // Build screen content in memory (double buffering)
+    let screenContent = '';
+    
+    // Add header
+    screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
+    screenContent += colorText('=============================', 'cyan') + '\n';
+    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Main Menu:', 'cyan') + '\n';
+    screenContent += colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan') + '\n';
+    screenContent += colorText('Navigation is circular', 'dim') + '\n';
+    screenContent += '\n';
     
     // Display menu options
     menuOptions.forEach((option, index) => {
@@ -1596,8 +1647,12 @@ async function showMainMenu() {
       const indicator = isCurrent ? colorText('●', 'green') : colorText('○', 'dim');
       const optionText = isCurrent ? colorText(option.text, 'bright') : colorText(option.text, 'yellow');
       
-      console.log(`${indicator} ${optionText}`);
+      screenContent += `${indicator} ${optionText}\n`;
     });
+    
+    // Clear screen and output entire buffer at once
+    clearScreen();
+    console.log(screenContent);
     
     const key = await getKeyPress();
     
@@ -1629,12 +1684,19 @@ async function showModelMenu() {
   let currentIndex = 0;
   
   while (true) {
-    clearScreen();
-    showHeader();
-    console.log(colorText('Model Management:', 'cyan'));
-    console.log(colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan'));
-    console.log(colorText('Navigation is circular', 'dim'));
-    console.log('');
+    // Build screen content in memory (double buffering)
+    let screenContent = '';
+    
+    // Add header
+    screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
+    screenContent += colorText('=============================', 'cyan') + '\n';
+    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Model Management:', 'cyan') + '\n';
+    screenContent += colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan') + '\n';
+    screenContent += colorText('Navigation is circular', 'dim') + '\n';
+    screenContent += '\n';
     
     // Display menu options
     menuOptions.forEach((option, index) => {
@@ -1642,8 +1704,12 @@ async function showModelMenu() {
       const indicator = isCurrent ? colorText('●', 'green') : colorText('○', 'dim');
       const optionText = isCurrent ? colorText(option.text, 'bright') : colorText(option.text, 'yellow');
       
-      console.log(`${indicator} ${optionText}`);
+      screenContent += `${indicator} ${optionText}\n`;
     });
+    
+    // Clear screen and output entire buffer at once
+    clearScreen();
+    console.log(screenContent);
     
     const key = await getKeyPress();
     
