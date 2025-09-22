@@ -243,10 +243,11 @@ async function selectModelsCircular() {
     screenContent += '\n';
     
     screenContent += colorText('Select Models for Benchmark', 'magenta') + '\n';
-    screenContent += colorText('Use ↑↓ arrows to navigate, SPACE to select/deselect, ENTER to confirm', 'cyan') + '\n';
+    screenContent += colorText('Use ↑↓ arrows to navigate, TAB to select/deselect, ENTER to run benchmark', 'cyan') + '\n';
     screenContent += colorText('Type to search (real-time filtering)', 'cyan') + '\n';
     screenContent += colorText('Press "A" to select all models, "N" to deselect all', 'cyan') + '\n';
     screenContent += colorText('Circle states: ●=Current+Selected  ○=Current+Unselected  ●=Selected  ○=Unselected', 'dim') + '\n';
+    screenContent += colorText('Quick run: ENTER on any model | Multi-select: TAB then ENTER', 'dim') + '\n';
     screenContent += '\n';
     
     // Search interface - always visible
@@ -347,15 +348,24 @@ async function selectModelsCircular() {
         currentPage++;
         currentIndex = currentPage * visibleItemsCount;
       }
-    } else if (key === ' ') {
-      // Spacebar
+    } else if (key === '\t') {
+      // Tab - select/deselect current model
       const actualModelIndex = allModels.indexOf(filteredModels[currentIndex]);
       if (actualModelIndex !== -1) {
         allModels[actualModelIndex].selected = !allModels[actualModelIndex].selected;
       }
     } else if (key === '\r') {
-      // Enter
-      break;
+      // Enter - run benchmark on current model (quick single model)
+      const currentModel = filteredModels[currentIndex];
+      if (currentModel) {
+        // Select just the current model and run benchmark
+        allModels.forEach(model => model.selected = false);
+        const actualModelIndex = allModels.indexOf(currentModel);
+        if (actualModelIndex !== -1) {
+          allModels[actualModelIndex].selected = true;
+        }
+        break;
+      }
     } else if (key === '\u0003') {
       // Ctrl+C
       process.exit(0);
@@ -426,8 +436,8 @@ async function selectModelsCircular() {
       );
       currentIndex = 0;
       currentPage = 0;
-    } else if (key.length === 1) {
-      // Regular character - add to search query
+    } else if (key === ' ' || key.length === 1) {
+      // Spacebar or regular character - add to search query
       searchQuery += key;
       // Filter models based on search query
       const lowercaseQuery = searchQuery.toLowerCase();
