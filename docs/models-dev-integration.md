@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a comprehensive explanation of how the AI benchmark CLI integrates with models.dev to provide a rich, up-to-date provider and model ecosystem. The integration enables users to easily access verified AI providers and their models without manual configuration.
+This document provides a comprehensive explanation of how the AI benchmark CLI integrates with models.dev to provide a rich, up-to-date provider and model ecosystem. The integration enables users to easily access verified AI providers and their models without manual configuration, while also supporting custom providers for complete flexibility.
 
 ## What is Models.dev?
 
@@ -25,17 +25,26 @@ This module handles all communication with the models.dev API and provides cachi
 - `getModelsForProvider(providerId)` - Get models for a specific provider
 - `refreshData()` - Force refresh from API (bypassing cache)
 
-#### 2. `opencode-integration.js` - Provider Management
-This module bridges the models.dev data with the opencode authentication system.
+#### 2. `opencode-integration.js` - Verified Provider Management
+This module handles **verified providers only** from models.dev and manages their authentication.
 
 **Key Functions:**
-- `getAuthenticatedProviders()` - Get providers with valid API keys
-- `getCustomProviders()` - Get user-defined custom providers
-- `getAllAvailableProviders()` - Combine both authenticated and custom providers
-- `addApiKey(providerId, apiKey)` - Store API keys securely
+- `getAuthenticatedProviders()` - Get verified providers with valid API keys from auth.json
+- `addApiKey(providerId, apiKey)` - Store API keys securely in auth.json
+- `getAllAvailableProviders()` - Combine verified providers with custom providers
+- `migrateFromOldConfig()` - Migrate data from old config format
 
-#### 3. `cli.js` - User Interface
-The main CLI interface uses the integrated provider data for model selection and benchmarking.
+#### 3. `ai-config.js` - Custom Provider Management
+This module handles **user-defined custom providers** and their models.
+
+**Key Functions:**
+- `addCustomProvider()` - Add new custom providers
+- `addModelToCustomProvider()` - Add models to existing custom providers
+- `getCustomProvidersFromConfig()` - Retrieve custom providers from config
+- `readAIConfig()` / `writeAIConfig()` - Manage ai-benchmark-config.json
+
+#### 4. `cli.js` - User Interface
+The main CLI interface uses both provider systems for model selection and benchmarking.
 
 ## Data Flow
 
@@ -59,10 +68,13 @@ User Request → CLI → getAllProviders() → Models.dev API → Provider Data
 - **Format:** JSON with timestamp
 - **Fallback:** Built-in provider list for offline operation
 
-### 2. Provider Authentication Flow
+### 2. Dual Provider System Flow
 
+The system now manages two distinct provider types:
+
+#### Verified Providers (models.dev integration)
 ```
-Provider Selection → API Key Input → Auth Storage → Provider Activation
+Provider Selection → API Key Input → auth.json Storage → Provider Activation
 ```
 
 **Authentication Process:**
@@ -72,23 +84,80 @@ Provider Selection → API Key Input → Auth Storage → Provider Activation
 3. **Secure Storage:** Key is stored in `~/.local/share/opencode/auth.json`
 4. **Provider Activation:** Provider becomes available in model selection
 
-**Security Features:**
-- **File Permissions:** Auth files have 0o600 permissions (read/write for owner only)
-- **XDG Compliance:** Follows XDG Base Directory specification
-- **No Key Exposure:** Keys are never logged or displayed in plain text
+#### Custom Providers (user-defined)
+```
+Custom Provider Setup → ai-benchmark-config.json Storage → Direct Integration
+```
+
+**Custom Provider Process:**
+
+1. **Provider Definition:** User defines custom provider with base URL and models
+2. **Config Storage:** Provider stored in `~/.config/ai-speedometer/ai-benchmark-config.json`
+3. **Model Management:** Users can add/remove models from custom providers
+4. **Direct Integration:** Available immediately in model selection
 
 ### 3. Model Loading and Filtering
 
 ```
-All Providers → Filter by Auth → Combine with Custom → Present to User
+Verified Providers → Custom Providers → Combine → Present to User
 ```
 
 **Model Assembly Process:**
 
-1. **Authenticated Models:** Load models from providers with valid API keys
-2. **Custom Models:** Load user-defined models from opencode.json
+1. **Verified Models:** Load models from authenticated providers in auth.json
+2. **Custom Models:** Load user-defined models from ai-benchmark-config.json
 3. **Deduplication:** Ensure no duplicate models in final list
 4. **Presentation:** Display combined list in model selection interface
+
+## Configuration Files and Locations
+
+### File Locations
+
+#### OpenCode Integration (Verified Providers)
+- **auth.json:** `~/.local/share/opencode/auth.json` (API keys for verified providers)
+- **opencode.json:** `~/.config/opencode/opencode.json` (deprecated, no longer used)
+
+#### AI Speedometer Config (Custom Providers)
+- **ai-benchmark-config.json:** `~/.config/ai-speedometer/ai-benchmark-config.json` (custom providers)
+- **Cache:** `~/.cache/ai-speedometer/models.json` (models.dev API cache)
+
+### Configuration Structures
+
+#### Verified Providers (auth.json)
+```json
+{
+  "openai": {
+    "type": "api",
+    "key": "sk-..."
+  },
+  "anthropic": {
+    "type": "api", 
+    "key": "sk-ant-..."
+  }
+}
+```
+
+#### Custom Providers (ai-benchmark-config.json)
+```json
+{
+  "verifiedProviders": {},
+  "customProviders": [
+    {
+      "id": "my-custom-provider",
+      "name": "My Custom Provider",
+      "type": "openai-compatible",
+      "baseUrl": "https://api.custom.com/v1",
+      "apiKey": "custom-api-key",
+      "models": [
+        {
+          "name": "Custom Model 1",
+          "id": "custom-model-1"
+        }
+      ]
+    }
+  ]
+}
+```
 
 ## Provider Types and SDK Integration
 
@@ -131,65 +200,91 @@ if (providerConfig.npm === '@ai-sdk/anthropic') {
 }
 ```
 
-## Configuration and Customization
+## User Interface Improvements
 
-### Adding Custom Providers
+### Search Bar Visibility
+- **Enhanced Visibility:** Search bar now includes 🔍 emoji indicator for clear visual identification
+- **Proper Sizing:** Header height calculations correctly account for search interface
+- **Consistent Implementation:** Search functionality works across all provider selection interfaces
 
-Users can extend the models.dev ecosystem with custom providers:
+### Screen Rendering Optimization
+- **Double Buffering:** Screen content built in memory before display to eliminate flickering
+- **Optimized Clearing:** Single screen clear operation per render cycle
+- **Smooth Navigation:** Pagination and scrolling work without visual artifacts
 
-1. **Custom Provider Setup:**
-```json
-{
-  "provider": {
-    "my-custom-provider": {
-      "name": "My Custom Provider",
-      "npm": "@ai-sdk/openai-compatible",
-      "options": {
-        "apiKey": "your-api-key",
-        "baseURL": "https://api.custom.com/v1"
-      },
-      "models": {
-        "custom-model-1": {
-          "name": "Custom Model 1"
-        }
-      }
-    }
-  }
-}
+### Menu Structure
+The CLI now follows the structure defined in `plan/models.md`:
+
+```
+Main Menu
+├── Set Model
+│   ├── Add Verified Provider (models.dev)
+│   ├── Add Custom Models
+│   │   ├── Add Models to Existing Provider
+│   │   ├── Add Custom Provider
+│   │   └── Back to Model Management
+│   ├── List Existing Providers
+│   ├── Debug Info
+│   └── Back to Main Menu
+├── Run Benchmark (AI SDK)
+├── Run Benchmark (REST API)
+└── Exit
 ```
 
-2. **Custom Provider Location:** `~/.config/opencode/opencode.json`
+## Adding Custom Providers
 
-### Provider Configuration Structure
+### Custom Provider Setup Process
 
-#### Verified Providers (from models.dev)
+1. **Navigate to Add Custom Models** from Model Management menu
+2. **Choose "Add Custom Provider"** option
+3. **Select Provider Type:** OpenAI Compatible or Anthropic
+4. **Enter Provider Details:**
+   - Provider ID (e.g., my-openai)
+   - Provider Name (e.g., MyOpenAI)
+   - Base URL (e.g., https://api.openai.com/v1)
+   - API Key
+5. **Add Models:** Choose single or multiple model mode
+6. **Automatic Save:** Provider saved to ai-benchmark-config.json
+
+### Example Custom Provider Configuration
+
 ```json
 {
-  "providerId": {
-    "type": "api",
-    "key": "api-key-here"
-  }
-}
-```
-
-#### Custom Providers (user-defined)
-```json
-{
-  "providerId": {
-    "name": "Provider Name",
-    "npm": "@ai-sdk/package-name",
-    "options": {
-      "apiKey": "api-key",
-      "baseURL": "https://api.example.com/v1"
+  "id": "my-custom-openai",
+  "name": "My Custom OpenAI",
+  "type": "openai-compatible",
+  "baseUrl": "https://api.custom.com/v1",
+  "apiKey": "your-api-key",
+  "models": [
+    {
+      "name": "gpt-4",
+      "id": "gpt-4_1234567890"
     },
-    "models": {
-      "modelId": {
-        "name": "Model Name"
-      }
+    {
+      "name": "gpt-3.5-turbo",
+      "id": "gpt-3-5-turbo_1234567891"
     }
-  }
+  ]
 }
 ```
+
+## Migration System
+
+### Automatic Migration
+The system includes migration functionality for users transitioning from the old config format:
+
+- **Detection:** Automatically detects old `ai-benchmark-config.json` in current directory
+- **Migration:** Splits verified providers to auth.json and custom providers to new config location
+- **Backup:** Creates backup of old config file
+- **Reporting:** Shows migration results and any errors encountered
+
+### Migration Process
+1. **Old Config Detection:** Checks for `./ai-benchmark-config.json`
+2. **Data Splitting:** 
+   - Verified providers → `~/.local/share/opencode/auth.json`
+   - Custom providers → `~/.config/ai-speedometer/ai-benchmark-config.json`
+3. **Backup:** Renames old file to `ai-benchmark-config.json.backup`
+4. **Confirmation:** Shows migration summary to user
 
 ## Error Handling and Resilience
 
@@ -211,32 +306,13 @@ Users can extend the models.dev ecosystem with custom providers:
 - **Model Validation:** Verify model data integrity
 - **URL Validation:** Confirm base URLs are properly formatted
 
-## Performance Optimization
-
-### Caching Strategy
-- **Local Cache:** Reduces API calls and improves load times
-- **Conditional Updates:** Only fetch when data is stale
-- **Memory Efficiency:** Cache data is compactly stored
-- **Fast Access:** In-memory filtering and searching
-
-### Search Optimization
-- **Debounced Input:** 50ms delay reduces unnecessary filtering
-- **Efficient Algorithms:** Optimized search across multiple fields
-- **Partial Results:** Show results immediately during typing
-- **Memory Management:** Clean up unused search timeouts
-
-### Concurrent Loading
-- **Parallel Requests:** Fetch authenticated and custom providers concurrently
-- **Non-blocking UI:** Interface remains responsive during data loading
-- **Progressive Enhancement:** Show available data while loading more
-
 ## Security Considerations
 
 ### API Key Storage
 - **Secure File Permissions:** Auth files restricted to owner (0o600)
 - **XDG Compliance:** Follows system standards for config locations
 - **No Key Logging:** API keys never appear in logs or output
-- **Environment Variables:** Support for environment-based configuration
+- **Separation of Concerns:** Verified and custom provider keys stored separately
 
 ### Network Security
 - **HTTPS Only:** All API communications use HTTPS
@@ -254,7 +330,19 @@ Users can extend the models.dev ecosystem with custom providers:
 
 ### Common Issues
 
-#### 1. Models Not Loading
+#### 1. Search Bar Not Visible
+**Symptoms:** Search interface missing from provider selection
+**Solution:** 
+- This is now fixed with 🔍 emoji indicator and proper header calculations
+- Ensure you're using the updated CLI version
+
+#### 2. Screen Flickering During Navigation
+**Symptoms:** Visual artifacts during scrolling or pagination
+**Solution:** 
+- This has been resolved with double buffering implementation
+- Update to latest CLI version if experiencing issues
+
+#### 3. Models Not Loading
 **Symptoms:** Model selection shows empty or outdated list
 **Solution:** 
 ```bash
@@ -262,7 +350,7 @@ Users can extend the models.dev ecosystem with custom providers:
 node -e "import('./models-dev.js').then(m => m.clearCache())"
 ```
 
-#### 2. Authentication Issues
+#### 4. Authentication Issues
 **Symptoms:** Provider appears but models fail during benchmark
 **Solution:**
 ```bash
@@ -272,12 +360,16 @@ cat ~/.local/share/opencode/auth.json
 # Verify API key format and permissions
 ```
 
-#### 3. Search Performance Issues
-**Symptoms:** Lag or flickering during search typing
+#### 5. Custom Provider Issues
+**Symptoms:** Custom providers not appearing or models not working
 **Solution:**
-- Ensure cache directory exists and is writable
-- Check for large model lists (1000+ models)
-- Verify system resources are adequate
+```bash
+# Check custom provider config
+cat ~/.config/ai-speedometer/ai-benchmark-config.json
+
+# Verify config directory exists
+ls -la ~/.config/ai-speedometer/
+```
 
 ### Debugging Commands
 
@@ -285,11 +377,15 @@ cat ~/.local/share/opencode/auth.json
 # View cache status
 ls -la ~/.cache/ai-speedometer/
 
-# View auth configuration
+# View verified provider configuration
 cat ~/.local/share/opencode/auth.json
 
 # View custom providers
-cat ~/.config/opencode/opencode.json
+cat ~/.config/ai-speedometer/ai-benchmark-config.json
+
+# View all config locations
+node cli.js
+# Then select "Debug Info" from the menu
 
 # Clear all caches
 rm -rf ~/.cache/ai-speedometer/
@@ -307,6 +403,32 @@ This creates detailed logs in `debug.log` including:
 - Cache operations
 - Provider loading process
 - Authentication flow
+- Config system operations
+
+## Performance Optimization
+
+### Caching Strategy
+- **Local Cache:** Reduces API calls and improves load times
+- **Conditional Updates:** Only fetch when data is stale
+- **Memory Efficiency:** Cache data is compactly stored
+- **Fast Access:** In-memory filtering and searching
+
+### Search Optimization
+- **Debounced Input:** 50ms delay reduces unnecessary filtering
+- **Efficient Algorithms:** Optimized search across multiple fields
+- **Partial Results:** Show results immediately during typing
+- **Memory Management:** Clean up unused search timeouts
+
+### Screen Rendering
+- **Double Buffering:** Eliminates screen flickering
+- **Optimized Clearing:** Single screen clear per render cycle
+- **Memory Efficient:** Screen content built in memory
+- **Responsive:** Immediate feedback for user interactions
+
+### Concurrent Loading
+- **Parallel Requests:** Fetch verified and custom providers concurrently
+- **Non-blocking UI:** Interface remains responsive during data loading
+- **Progressive Enhancement:** Show available data while loading more
 
 ## Future Enhancements
 
@@ -326,6 +448,7 @@ This creates detailed logs in `debug.log` including:
    - Provider favorite/bookmarking
    - Model capability filtering
    - Advanced search options
+   - Visual provider status indicators
 
 4. **Integration Enhancements:**
    - Real-time provider updates
@@ -341,4 +464,6 @@ This creates detailed logs in `debug.log` including:
 
 ## Conclusion
 
-The models.dev integration provides a powerful, extensible foundation for AI provider and model management. By combining centralized provider data with local authentication and customization, the system offers both convenience and flexibility. The caching, performance optimizations, and security features ensure a reliable and user-friendly experience for benchmarking AI models across multiple providers.
+The models.dev integration provides a powerful, extensible foundation for AI provider and model management. The new dual-system architecture separates verified providers (from models.dev) from custom providers (user-defined), providing both convenience and flexibility. The recent improvements in search visibility, screen rendering, and configuration management ensure a reliable and user-friendly experience for benchmarking AI models across multiple providers.
+
+The separation of concerns between verified and custom providers, combined with the robust migration system and optimized user interface, makes this integration both powerful and approachable for users at all levels of expertise.

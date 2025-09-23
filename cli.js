@@ -53,17 +53,12 @@ function createAnthropicProvider(baseUrl, apiKey) {
   log(`Creating Anthropic provider with baseUrl: ${baseUrl}`);
   log(`API Key length: ${apiKey ? apiKey.length : 0}`);
   
-  // Ensure base URL ends with /v1 for AI SDK compatibility
-  let normalizedBaseUrl = baseUrl;
-  if (!baseUrl.endsWith('/v1')) {
-    normalizedBaseUrl = baseUrl.endsWith('/') ? `${baseUrl}v1` : `${baseUrl}/v1`;
-    log(`Normalized base URL to: ${normalizedBaseUrl}`);
-  }
+  // Use baseUrl as provided - no automatic normalization needed
   
   // Try with baseURL parameter (correct according to docs)
   const provider = createAnthropic({
     apiKey: apiKey,
-    baseURL: normalizedBaseUrl,
+    baseURL: baseUrl,
     // Add minimal fetch logging for debugging
     fetch: debugMode ? async (input, init) => {
       log(`API Request to: ${input}`);
