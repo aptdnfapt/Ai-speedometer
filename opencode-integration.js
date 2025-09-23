@@ -82,62 +82,19 @@ export const writeAuthJson = async (authData) => {
   }
 };
 
-// Write to opencode.json with proper error handling
-export const writeOpencodeConfig = async (config) => {
-  const { opencodeJson } = getFilePaths();
-  
-  try {
-    ensureDirectories();
-    
-    // Write the file with proper JSON formatting
-    const jsonData = JSON.stringify(config, null, 2);
-    fs.writeFileSync(opencodeJson, jsonData);
-    
-    return true;
-  } catch (error) {
-    console.error('Error writing opencode.json:', error.message);
-    return false;
-  }
+// Write to opencode.json - deprecated function, kept for compatibility
+export const writeOpencodeConfig = async () => {
+  console.warn('Warning: opencode.json is no longer used. Use ai-benchmark-config.json instead.');
+  return false;
 };
 
-// Read and parse opencode.json with robust JSONC parsing (matching opencode's approach)
+// Read and parse opencode.json - deprecated function, kept for compatibility
 export const readOpencodeConfig = async () => {
-  const { opencodeJson } = getFilePaths();
-  
-  try {
-    if (!fs.existsSync(opencodeJson)) {
-      return { provider: {} };
-    }
-    
-    const data = fs.readFileSync(opencodeJson, 'utf8');
-    const errors = [];
-    const config = parseJsonc(data, errors, { allowTrailingComma: true });
-    
-    if (errors.length > 0) {
-      console.warn('Warning: JSONC parsing errors in opencode.json:', errors.map(e => e.error).join(', '));
-      // Try to return what we could parse
-      if (config && typeof config === 'object') {
-        if (!config.provider) {
-          config.provider = {};
-        }
-        return config;
-      }
-      return { provider: {} };
-    }
-    
-    // Ensure provider section exists
-    if (!config.provider) {
-      config.provider = {};
-    }
-    
-    return config;
-  } catch (error) {
-    console.warn('Warning: Could not read opencode.json:', error.message);
-    return { provider: {} };
-  }
+  console.warn('Warning: opencode.json is no longer used. Use ai-benchmark-config.json instead.');
+  return { provider: {} };
 };
 
-// Get providers with valid API keys from auth.json
+// Get providers with valid API keys from auth.json (verified providers only)
 export const getAuthenticatedProviders = async () => {
   const authData = await readAuthJson();
   const allProviders = await getAllProviders();
@@ -170,59 +127,10 @@ export const getAuthenticatedProviders = async () => {
   return authenticatedProviders;
 };
 
-// Get custom providers from opencode.json
+// Get custom providers - now always returns empty array since we don't use opencode.json anymore
+// This function is kept for compatibility but will be deprecated
 export const getCustomProviders = async () => {
-  const config = await readOpencodeConfig();
-  const customProviders = [];
-  
-  for (const [providerId, providerConfig] of Object.entries(config.provider || {})) {
-    // Skip if this looks like a verified provider override
-    if (providerConfig.options && !providerConfig.models) {
-      continue;
-    }
-    
-    // Extract models from the provider config
-    const models = [];
-    
-    // If models are defined in the config
-    if (providerConfig.models) {
-      for (const [modelId, modelConfig] of Object.entries(providerConfig.models)) {
-        const modelName = modelConfig.name || modelId;
-        models.push({
-          name: modelName.trim(), // Trim any trailing spaces
-          id: `${providerId}_${modelId}`
-        });
-      }
-    }
-    
-    // Extract baseUrl and apiKey from options
-    const baseUrl = providerConfig.options?.baseURL || providerConfig.baseUrl;
-    const apiKey = providerConfig.options?.apiKey || '';
-    
-    // Determine provider type based on npm field or fallback
-    let providerType = 'openai-compatible'; // default
-    if (providerConfig.npm === '@ai-sdk/anthropic') {
-      providerType = 'anthropic';
-    } else if (providerConfig.npm === '@ai-sdk/google') {
-      providerType = 'google';
-    } else if (providerConfig.npm === '@ai-sdk/openai') {
-      providerType = 'openai';
-    }
-    
-    // Only add if we have models or it's a custom provider configuration
-    if (models.length > 0 || providerConfig.options) {
-      customProviders.push({
-        id: providerId,
-        name: providerConfig.name || providerId,
-        type: providerType,
-        baseUrl: baseUrl,
-        apiKey: apiKey,
-        models: models
-      });
-    }
-  }
-  
-  return customProviders;
+  return [];
 };
 
 // Verify provider exists in models.dev
@@ -261,14 +169,22 @@ export const removeApiKey = async (providerId) => {
   return true;
 };
 
-// Get all available providers (authenticated + custom)
+// Get all available providers (authenticated from auth.json + custom from ai-benchmark-config.json)
 export const getAllAvailableProviders = async () => {
-  const [authenticatedProviders, customProviders] = await Promise.all([
+  const [authenticatedProviders, customProvidersFromConfig] = await Promise.all([
     getAuthenticatedProviders(),
-    getCustomProviders()
+    (async () => {
+      try {
+        const { getCustomProvidersFromConfig } = await import('./ai-config.js');
+        return await getCustomProvidersFromConfig();
+      } catch (error) {
+        console.warn('Warning: Could not load custom providers:', error.message);
+        return [];
+      }
+    })()
   ]);
   
-  return [...authenticatedProviders, ...customProviders];
+  return [...authenticatedProviders, ...customProvidersFromConfig];
 };
 
 // Check if a provider is authenticated
@@ -283,7 +199,7 @@ export const getProviderAuth = async (providerId) => {
   return authData[providerId] || null;
 };
 
-// Migration helper: Import from old config format
+// Migration helper: Import from old config format to new ai-benchmark-config.json
 export const migrateFromOldConfig = async (oldConfig) => {
   const results = {
     migrated: 0,
@@ -292,7 +208,7 @@ export const migrateFromOldConfig = async (oldConfig) => {
   };
   
   try {
-    // Migrate verified providers
+    // Migrate verified providers to auth.json
     if (oldConfig.verifiedProviders) {
       for (const [providerId, apiKey] of Object.entries(oldConfig.verifiedProviders)) {
         const providerInfo = await verifyProvider(providerId);
@@ -312,38 +228,41 @@ export const migrateFromOldConfig = async (oldConfig) => {
       }
     }
     
-    // Migrate custom providers to opencode.json format
+    // Migrate custom providers to ai-benchmark-config.json format
     if (oldConfig.customProviders && oldConfig.customProviders.length > 0) {
-      const config = await readOpencodeConfig();
-      
-      for (const provider of oldConfig.customProviders) {
-        try {
-          // Convert to opencode.json format
-          config.provider[provider.id] = {
-            name: provider.name,
-            options: {
+      try {
+        const { addCustomProvider, readAIConfig, writeAIConfig } = await import('./ai-config.js');
+        const config = await readAIConfig();
+        
+        for (const provider of oldConfig.customProviders) {
+          try {
+            // Convert to ai-benchmark-config.json format
+            const providerData = {
+              id: provider.id,
+              name: provider.name,
+              type: provider.type,
+              baseUrl: provider.baseUrl,
               apiKey: provider.apiKey,
-              baseURL: provider.baseUrl
-            },
-            models: {}
-          };
-          
-          // Add models
-          for (const model of provider.models) {
-            config.provider[provider.id].models[model.id.replace(`${provider.id}_`, '')] = {
-              name: model.name
+              models: provider.models || []
             };
+            
+            // Add to config
+            config.customProviders = config.customProviders || [];
+            config.customProviders.push(providerData);
+            
+            results.migrated++;
+          } catch (error) {
+            results.failed++;
+            results.errors.push(`Failed to migrate custom provider ${provider.name}: ${error.message}`);
           }
-          
-          results.migrated++;
-        } catch (error) {
-          results.failed++;
-          results.errors.push(`Failed to migrate custom provider ${provider.name}: ${error.message}`);
         }
+        
+        // Save the updated config
+        await writeAIConfig(config);
+      } catch (error) {
+        results.failed++;
+        results.errors.push(`Failed to migrate custom providers: ${error.message}`);
       }
-      
-      // Save the updated config
-      await writeOpencodeConfig(config);
     }
     
     return results;
@@ -356,21 +275,42 @@ export const migrateFromOldConfig = async (oldConfig) => {
 
 // Export utility functions for debugging
 export const getDebugInfo = async () => {
-  const paths = getFilePaths();
-  const [authData, configData] = await Promise.all([
+  const opencodePaths = getFilePaths();
+  const [authData, aiConfigPaths] = await Promise.all([
     readAuthJson(),
-    readOpencodeConfig()
+    (async () => {
+      try {
+        const { getAIConfigPaths } = await import('./ai-config.js');
+        return await getAIConfigPaths();
+      } catch (error) {
+        return { configDir: 'N/A', configJson: 'N/A', configExists: false };
+      }
+    })()
   ]);
   
-  const authExists = fs.existsSync(paths.authJson);
-  const configExists = fs.existsSync(paths.opencodeJson);
+  const authExists = fs.existsSync(opencodePaths.authJson);
+  const configExists = fs.existsSync(opencodePaths.opencodeJson);
+  
+  // Get ai-benchmark-config.json data
+  let aiConfigData = { verifiedProviders: {}, customProviders: [] };
+  try {
+    const { readAIConfig } = await import('./ai-config.js');
+    aiConfigData = await readAIConfig();
+  } catch (error) {
+    // Ignore if ai-config is not available
+  }
   
   return {
-    paths,
+    opencodePaths,
     authExists,
     configExists,
     authData: Object.keys(authData),
-    configProviders: Object.keys(configData.provider || {}),
+    configProviders: [], // No longer used
+    aiConfigPaths,
+    aiConfigData: {
+      verifiedProviders: Object.keys(aiConfigData.verifiedProviders || {}),
+      customProviders: (aiConfigData.customProviders || []).map(p => p.id)
+    },
     xdgPaths: getXDGPaths()
   };
 };

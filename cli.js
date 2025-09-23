@@ -15,6 +15,14 @@ import {
   migrateFromOldConfig,
   getDebugInfo 
 } from './opencode-integration.js';
+import {
+  readAIConfig,
+  getCustomProvidersFromConfig,
+  getVerifiedProvidersFromConfig,
+  addCustomProvider,
+  addModelToCustomProvider,
+  getAIConfigDebugPaths
+} from './ai-config.js';
 import 'dotenv/config';
 import Table from 'cli-table3';
 
@@ -123,13 +131,13 @@ function showHeader() {
   console.log('');
 }
 
-// Configuration management - now using opencode files
+// Configuration management - now using ai-benchmark-config.json for custom providers
 async function loadConfig() {
   try {
     // Check if we need to migrate from old config
     const oldConfigFile = 'ai-benchmark-config.json';
     if (fs.existsSync(oldConfigFile)) {
-      console.log(colorText('Migrating from old config format to opencode format...', 'yellow'));
+      console.log(colorText('Migrating from old config format to new format...', 'yellow'));
       
       try {
         const data = fs.readFileSync(oldConfigFile, 'utf8');
@@ -156,7 +164,7 @@ async function loadConfig() {
       }
     }
     
-    // Load providers from opencode integration
+    // Load providers from both auth.json (verified) and ai-benchmark-config.json (custom)
     const providers = await getAllAvailableProviders();
     
     return {
@@ -169,11 +177,11 @@ async function loadConfig() {
   }
 }
 
-// Save config - now using opencode files
+// Save config - now using ai-benchmark-config.json and auth.json
 async function saveConfig(config) {
   // Note: This function is kept for compatibility but the actual saving
-  // is handled by the opencode integration functions (addApiKey, etc.)
-  console.log(colorText('Note: Configuration is now automatically saved to opencode files', 'cyan'));
+  // is handled by the ai-config.js and opencode-integration.js functions
+  console.log(colorText('Note: Configuration is now automatically saved to ai-benchmark-config.json and auth.json', 'cyan'));
 }
 
 // Keyboard input handling
@@ -822,18 +830,15 @@ async function displayColorfulResults(results, method = 'AI SDK') {
 }
 
 // Helper function to calculate visible items based on terminal height
-function getVisibleItemsCount(headerHeight = 8) {
+function getVisibleItemsCount(headerHeight = 10) {
   const terminalHeight = process.stdout.rows || 24;
-  return Math.max(5, terminalHeight - headerHeight);
+  return Math.max(3, terminalHeight - headerHeight);
 }
 
-// Provider management with models.dev integration and pagination
-async function addProvider() {
-  clearScreen();
-  showHeader();
-  console.log(colorText('Add Provider', 'magenta'));
-  console.log('');
-  
+
+
+// Add a verified provider (saves to both auth.json and ai-benchmark-config.json)
+async function addVerifiedProvider() {
   let searchQuery = '';
   let allProviders = [];
   let filteredProviders = [];
@@ -845,6 +850,10 @@ async function addProvider() {
     allProviders = await getAllProviders();
     filteredProviders = allProviders;
   } catch (error) {
+    clearScreen();
+    showHeader();
+    console.log(colorText('Add Verified Provider', 'magenta'));
+    console.log('');
     console.log(colorText('Error loading providers: ', 'red') + error.message);
     await question(colorText('Press Enter to continue...', 'yellow'));
     return;
@@ -860,19 +869,19 @@ async function addProvider() {
     screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
     screenContent += '\n';
     
-    screenContent += colorText('Add Provider', 'magenta') + '\n';
+    screenContent += colorText('Add Verified Provider', 'magenta') + '\n';
     screenContent += colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan') + '\n';
     screenContent += colorText('Type to search (real-time filtering)', 'cyan') + '\n';
     screenContent += colorText('Navigation is circular', 'dim') + '\n';
     screenContent += '\n';
     
     // Search interface - always visible
-    screenContent += colorText('Search: ', 'yellow') + colorText(searchQuery + '_', 'bright') + '\n';
+    screenContent += colorText('🔍 Search: ', 'yellow') + colorText(searchQuery + '_', 'bright') + '\n';
     screenContent += '\n';
     
     // Calculate pagination
-    const visibleItemsCount = getVisibleItemsCount();
-    const totalItems = filteredProviders.length + 1; // +1 for custom provider option
+    const visibleItemsCount = getVisibleItemsCount(11); // Account for search bar and header
+    const totalItems = filteredProviders.length;
     const totalPages = Math.ceil(totalItems / visibleItemsCount);
     
     // Ensure current page is valid
@@ -883,7 +892,7 @@ async function addProvider() {
     const endIndex = Math.min(startIndex + visibleItemsCount, totalItems);
     
     // Display providers with pagination
-    screenContent += colorText('Available Providers:', 'cyan') + '\n';
+    screenContent += colorText('Available Verified Providers:', 'cyan') + '\n';
     screenContent += '\n';
     
     // Show current page of providers
@@ -895,16 +904,6 @@ async function addProvider() {
       const providerType = isCurrent ? colorText(`(${provider.type})`, 'cyan') : colorText(`(${provider.type})`, 'dim');
       
       screenContent += `${indicator} ${providerName} ${providerType}\n`;
-    }
-    
-    // Show "Add Custom Provider" option if it's on current page
-    const customIndex = filteredProviders.length;
-    if (customIndex >= startIndex && customIndex < endIndex) {
-      const isCustomCurrent = customIndex === currentIndex;
-      const customIndicator = isCustomCurrent ? colorText('●', 'green') : colorText('○', 'dim');
-      const customText = isCustomCurrent ? colorText('Add Custom Provider', 'bright') : colorText('Add Custom Provider', 'yellow');
-      
-      screenContent += `${customIndicator} ${customText}\n`;
     }
     
     // Show pagination info
@@ -959,14 +958,8 @@ async function addProvider() {
         currentIndex = currentPage * visibleItemsCount;
       }
     } else if (key === '\r') {
-      // Enter - select current option
-      if (currentIndex === filteredProviders.length) {
-        // Custom provider selected
-        await addCustomProvider();
-      } else {
-        // Verified provider selected - auto-add all models
-        await addVerifiedProviderAuto(filteredProviders[currentIndex]);
-      }
+      // Enter - select current provider
+      await addVerifiedProviderAuto(filteredProviders[currentIndex]);
       break;
     } else if (key === '\u0003') {
       // Ctrl+C
@@ -1036,18 +1029,26 @@ async function addVerifiedProviderAuto(provider) {
     return;
   }
   
-  // Add API key to opencode auth.json
-  const success = await addApiKey(provider.id, apiKey);
+  // Add API key to auth.json (for opencode integration)
+  const authSuccess = await addApiKey(provider.id, apiKey);
   
-  if (!success) {
-    console.log(colorText('Failed to save API key to opencode auth.json', 'red'));
+  if (!authSuccess) {
+    console.log(colorText('Failed to save API key to auth.json', 'red'));
     await question(colorText('Press Enter to continue...', 'yellow'));
     return;
   }
   
+  // Also add to ai-benchmark-config.json for consistency
+  const { addVerifiedProvider: addVerifiedProviderToConfig } = await import('./ai-config.js');
+  const configSuccess = await addVerifiedProviderToConfig(provider.id, apiKey);
+  
+  if (!configSuccess) {
+    console.log(colorText('Warning: Could not save to ai-benchmark-config.json', 'yellow'));
+  }
+  
   console.log('');
   console.log(colorText('Provider added successfully!', 'green'));
-  console.log(colorText(`API key saved to opencode auth.json`, 'cyan'));
+  console.log(colorText(`API key saved to auth.json`, 'cyan'));
   console.log(colorText(`Models will be loaded dynamically from ${provider.name}`, 'cyan'));
   console.log(colorText(`Found ${models.length} available models`, 'cyan'));
   
@@ -1056,19 +1057,19 @@ async function addVerifiedProviderAuto(provider) {
 
 
 
-// Add a custom provider (now integrated with opencode.json)
-async function addCustomProvider() {
+// Add a custom provider (now using ai-benchmark-config.json)
+async function addCustomProviderCLI() {
   clearScreen();
   showHeader();
   console.log(colorText('Add Custom Provider', 'magenta'));
   console.log('');
-  console.log(colorText('Note: Custom providers are saved to opencode.json', 'cyan'));
+  console.log(colorText('Note: Custom providers are saved to ai-benchmark-config.json', 'cyan'));
   console.log('');
   
   const providerOptions = [
     { id: 1, text: 'OpenAI Compatible', type: 'openai-compatible' },
     { id: 2, text: 'Anthropic', type: 'anthropic' },
-    { id: 3, text: 'Back to provider selection', action: 'back' }
+    { id: 3, text: 'Back to Custom Models menu', action: 'back' }
   ];
   
   let currentIndex = 0;
@@ -1125,178 +1126,108 @@ async function addCustomProvider() {
   
   if (selectedChoice.action === 'back') return;
   
-  if (selectedChoice.type === 'openai-compatible') {
-    // OpenAI Compatible
-    const providerId = await question(colorText('Enter provider ID (e.g., my-openai): ', 'cyan'));
-    const name = await question(colorText('Enter provider name (e.g., MyOpenAI): ', 'cyan'));
-    const baseUrl = await question(colorText('Enter base URL (e.g., https://api.openai.com/v1): ', 'cyan'));
-    const apiKey = await question(colorText('Enter API key: ', 'cyan'));
-    
-    // Ask if user wants to add multiple models
+  const providerId = await question(colorText('Enter provider ID (e.g., my-openai): ', 'cyan'));
+  const name = await question(colorText('Enter provider name (e.g., MyOpenAI): ', 'cyan'));
+  const baseUrl = await question(colorText('Enter base URL (e.g., https://api.openai.com/v1): ', 'cyan'));
+  const apiKey = await question(colorText('Enter API key: ', 'cyan'));
+  
+  // Ask if user wants to add multiple models
+  console.log('');
+  console.log(colorText('Do you want to add multiple models?', 'cyan'));
+  console.log(colorText('1. Add single model', 'yellow'));
+  console.log(colorText('2. Add multiple models', 'yellow'));
+  
+  const modelChoice = await question(colorText('Enter choice (1 or 2): ', 'cyan'));
+  
+  let models = [];
+  
+  if (modelChoice === '2') {
+    // Multiple models mode
     console.log('');
-    console.log(colorText('Do you want to add multiple models?', 'cyan'));
-    console.log(colorText('1. Add single model', 'yellow'));
-    console.log(colorText('2. Add multiple models', 'yellow'));
-    
-    const modelChoice = await question(colorText('Enter choice (1 or 2): ', 'cyan'));
-    
-    let models = {};
-    
-    if (modelChoice === '2') {
-      // Multiple models mode
-      console.log('');
-      console.log(colorText('Enter model names (one per line, empty line to finish):', 'cyan'));
-      console.log(colorText('Examples: gpt-4, gpt-4-turbo, gpt-3.5-turbo', 'dim'));
-      console.log('');
-      
-      while (true) {
-        const modelName = await question(colorText('Model name: ', 'cyan'));
-        if (!modelName.trim()) break;
-        
-        const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-        models[modelId] = {
-          name: modelName.trim()
-        };
-      }
-    } else {
-      // Single model mode
-      const modelName = await question(colorText('Enter model name (e.g., gpt-4): ', 'cyan'));
-      const modelId = modelName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      models[modelId] = {
-        name: modelName
-      };
-    }
-    
-    if (Object.keys(models).length === 0) {
-      console.log(colorText('At least one model is required.', 'red'));
-      await question(colorText('Press Enter to continue...', 'yellow'));
-      return;
-    }
-    
-    // Create opencode.json format
-    const { readOpencodeConfig } = await import('./opencode-integration.js');
-    const config = await readOpencodeConfig();
-    
-    config.provider = config.provider || {};
-    config.provider[providerId] = {
-      name,
-      options: {
-        apiKey,
-        baseURL: baseUrl
-      },
-      models
-    };
-    
-    // Save to opencode.json using the integration module
-    const { writeOpencodeConfig } = await import('./opencode-integration.js');
-    const success = await writeOpencodeConfig(config);
-    
-    if (!success) {
-      console.log(colorText('Warning: Could not save to opencode.json', 'yellow'));
-    }
-    
-    console.log(colorText('Provider added successfully!', 'green'));
-    console.log(colorText(`Added ${Object.keys(models).length} model(s)`, 'cyan'));
-    console.log(colorText(`Saved to opencode.json`, 'cyan'));
-    
-  } else if (selectedChoice.type === 'anthropic') {
-    // Anthropic
-    const providerId = await question(colorText('Enter provider ID (e.g., my-anthropic): ', 'cyan'));
-    const name = await question(colorText('Enter provider name (e.g., MyAnthropic): ', 'cyan'));
-    const baseUrl = await question(colorText('Enter base URL (e.g., https://api.anthropic.com): ', 'cyan'));
-    const apiKey = await question(colorText('Enter Anthropic API key: ', 'cyan'));
-    
-    // Ask if user wants to add multiple models
+    console.log(colorText('Enter model names (one per line, empty line to finish):', 'cyan'));
+    console.log(colorText('Examples: gpt-4, gpt-4-turbo, gpt-3.5-turbo', 'dim'));
     console.log('');
-    console.log(colorText('Do you want to add multiple models?', 'cyan'));
-    console.log(colorText('1. Add single model', 'yellow'));
-    console.log(colorText('2. Add multiple models', 'yellow'));
     
-    const modelChoice = await question(colorText('Enter choice (1 or 2): ', 'cyan'));
-    
-    let models = {};
-    
-    if (modelChoice === '2') {
-      // Multiple models mode
-      console.log('');
-      console.log(colorText('Enter model names (one per line, empty line to finish):', 'cyan'));
-      console.log(colorText('Examples: claude-3-sonnet-20240229, claude-3-haiku-20240307', 'dim'));
-      console.log('');
+    while (true) {
+      const modelName = await question(colorText('Model name: ', 'cyan'));
+      if (!modelName.trim()) break;
       
-      while (true) {
-        const modelName = await question(colorText('Model name: ', 'cyan'));
-        if (!modelName.trim()) break;
-        
-        const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-        models[modelId] = {
-          name: modelName.trim()
-        };
-      }
-    } else {
-      // Single model mode
-      const modelName = await question(colorText('Enter model name (e.g., claude-3-sonnet-20240229): ', 'cyan'));
-      const modelId = modelName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      models[modelId] = {
-        name: modelName
-      };
+      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') + '_' + Date.now();
+      models.push({
+        name: modelName.trim(),
+        id: modelId
+      });
     }
-    
-    if (Object.keys(models).length === 0) {
-      console.log(colorText('At least one model is required.', 'red'));
-      await question(colorText('Press Enter to continue...', 'yellow'));
-      return;
+  } else {
+    // Single model mode
+    const modelName = await question(colorText('Enter model name (e.g., gpt-4): ', 'cyan'));
+    if (modelName.trim()) {
+      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') + '_' + Date.now();
+      models.push({
+        name: modelName.trim(),
+        id: modelId
+      });
     }
-    
-    // Create opencode.json format
-    const { readOpencodeConfig } = await import('./opencode-integration.js');
-    const config = await readOpencodeConfig();
-    
-    config.provider = config.provider || {};
-    config.provider[providerId] = {
-      name,
-      options: {
-        apiKey,
-        baseURL: baseUrl
-      },
-      models
-    };
-    
-    // Save to opencode.json using the integration module
-    const { writeOpencodeConfig } = await import('./opencode-integration.js');
-    const success = await writeOpencodeConfig(config);
-    
-    if (!success) {
-      console.log(colorText('Warning: Could not save to opencode.json', 'yellow'));
-    }
-    
-    console.log(colorText('Provider added successfully!', 'green'));
-    console.log(colorText(`Added ${Object.keys(models).length} model(s)`, 'cyan'));
-    console.log(colorText(`Saved to opencode.json`, 'cyan'));
   }
+  
+  if (models.length === 0) {
+    console.log(colorText('At least one model is required.', 'red'));
+    await question(colorText('Press Enter to continue...', 'yellow'));
+    return;
+  }
+  
+  // Create provider data for ai-benchmark-config.json format
+  const providerData = {
+    id: providerId,
+    name: name,
+    type: selectedChoice.type,
+    baseUrl: baseUrl,
+    apiKey: apiKey,
+    models: models
+  };
+  
+  // Save to ai-benchmark-config.json
+  const success = await addCustomProvider(providerData);
+  
+  if (!success) {
+    console.log(colorText('Failed to save custom provider.', 'red'));
+    await question(colorText('Press Enter to continue...', 'yellow'));
+    return;
+  }
+  
+  console.log(colorText('Custom provider added successfully!', 'green'));
+  console.log(colorText(`Added ${models.length} model(s)`, 'cyan'));
+  console.log(colorText(`Saved to ai-benchmark-config.json`, 'cyan'));
   
   await question(colorText('\nPress Enter to continue...', 'yellow'));
 }
 
-// Show debug information about opencode integration
+// Show debug information about config system
 async function showDebugInfo() {
   clearScreen();
   showHeader();
-  console.log(colorText('OpenCode Integration Debug Info', 'magenta'));
+  console.log(colorText('Config System Debug Info', 'magenta'));
   console.log('');
   
   const debugInfo = await getDebugInfo();
   
-  console.log(colorText('File Paths:', 'cyan'));
-  console.log(colorText(`  auth.json: ${debugInfo.paths.authJson}`, 'white'));
-  console.log(colorText(`  opencode.json: ${debugInfo.paths.opencodeJson}`, 'white'));
+  console.log(colorText('OpenCode Paths (deprecated):', 'cyan'));
+  console.log(colorText(`  auth.json: ${debugInfo.opencodePaths.authJson}`, 'white'));
+  console.log(colorText(`  opencode.json: ${debugInfo.opencodePaths.opencodeJson}`, 'white'));
+  console.log('');
+  
+  console.log(colorText('AI Speedometer Config Paths:', 'cyan'));
+  console.log(colorText(`  ai-benchmark-config.json: ${debugInfo.aiConfigPaths.configJson}`, 'white'));
+  console.log(colorText(`  Config directory: ${debugInfo.aiConfigPaths.configDir}`, 'white'));
   console.log('');
   
   console.log(colorText('File Status:', 'cyan'));
   console.log(colorText(`  auth.json exists: ${debugInfo.authExists ? 'Yes' : 'No'}`, 'white'));
-  console.log(colorText(`  opencode.json exists: ${debugInfo.configExists ? 'Yes' : 'No'}`, 'white'));
+  console.log(colorText(`  opencode.json exists: ${debugInfo.configExists ? 'No' : 'No'}`, 'white'));
+  console.log(colorText(`  ai-benchmark-config.json exists: ${debugInfo.aiConfigPaths.configExists ? 'Yes' : 'No'}`, 'white'));
   console.log('');
   
-  console.log(colorText('Authenticated Providers:', 'cyan'));
+  console.log(colorText('Authenticated Providers (auth.json):', 'cyan'));
   if (debugInfo.authData.length === 0) {
     console.log(colorText('  None', 'dim'));
   } else {
@@ -1306,17 +1237,27 @@ async function showDebugInfo() {
   }
   console.log('');
   
-  console.log(colorText('Custom Providers:', 'cyan'));
-  if (debugInfo.configProviders.length === 0) {
+  console.log(colorText('Verified Providers (ai-benchmark-config.json):', 'cyan'));
+  if (debugInfo.aiConfigData.verifiedProviders.length === 0) {
     console.log(colorText('  None', 'dim'));
   } else {
-    debugInfo.configProviders.forEach(provider => {
+    debugInfo.aiConfigData.verifiedProviders.forEach(provider => {
       console.log(colorText(`  - ${provider}`, 'white'));
     });
   }
   console.log('');
   
-  console.log(colorText('XDG Paths:', 'cyan'));
+  console.log(colorText('Custom Providers (ai-benchmark-config.json):', 'cyan'));
+  if (debugInfo.aiConfigData.customProviders.length === 0) {
+    console.log(colorText('  None', 'dim'));
+  } else {
+    debugInfo.aiConfigData.customProviders.forEach(provider => {
+      console.log(colorText(`  - ${provider}`, 'white'));
+    });
+  }
+  console.log('');
+  
+  console.log(colorText('XDG Paths (for OpenCode):', 'cyan'));
   console.log(colorText(`  Data: ${debugInfo.xdgPaths.data}`, 'white'));
   console.log(colorText(`  Config: ${debugInfo.xdgPaths.config}`, 'white'));
   console.log('');
@@ -1335,35 +1276,129 @@ async function listProviders() {
   if (config.providers.length === 0) {
     console.log(colorText('No providers configured yet.', 'yellow'));
   } else {
-    config.providers.forEach((provider, index) => {
-      console.log(colorText(`${index + 1}. ${provider.name} (${provider.type})`, 'cyan'));
-      
-      if (provider.models.length > 0) {
-        console.log(colorText('   Models:', 'dim'));
-        provider.models.forEach((model, modelIndex) => {
-          console.log(colorText(`     ${modelIndex + 1}. ${model.name}`, 'yellow'));
-        });
-      } else {
-        console.log(colorText('   Models: None', 'dim'));
-      }
-      
-      console.log('');
+    // Separate verified and custom providers
+    const verifiedProviders = config.providers.filter(p => {
+      // Verified providers come from auth.json via models.dev
+      return p.baseUrl && p.baseUrl.includes('api.'); // Simple heuristic
     });
+    
+    const customProviders = config.providers.filter(p => {
+      return !verifiedProviders.includes(p);
+    });
+    
+    // Show verified providers
+    if (verifiedProviders.length > 0) {
+      console.log(colorText('Verified Providers (from models.dev):', 'green'));
+      verifiedProviders.forEach((provider, index) => {
+        console.log(colorText(`${index + 1}. ${provider.name} (${provider.type})`, 'cyan'));
+        
+        if (provider.models.length > 0) {
+          console.log(colorText('   Models:', 'dim'));
+          provider.models.forEach((model, modelIndex) => {
+            console.log(colorText(`     ${modelIndex + 1}. ${model.name}`, 'yellow'));
+          });
+        } else {
+          console.log(colorText('   Models: None', 'dim'));
+        }
+        
+        console.log('');
+      });
+    }
+    
+    // Show custom providers
+    if (customProviders.length > 0) {
+      console.log(colorText('Custom Providers:', 'magenta'));
+      customProviders.forEach((provider, index) => {
+        console.log(colorText(`${index + 1}. ${provider.name} (${provider.type})`, 'cyan'));
+        
+        if (provider.models.length > 0) {
+          console.log(colorText('   Models:', 'dim'));
+          provider.models.forEach((model, modelIndex) => {
+            console.log(colorText(`     ${modelIndex + 1}. ${model.name}`, 'yellow'));
+          });
+        } else {
+          console.log(colorText('   Models: None', 'dim'));
+        }
+        
+        console.log('');
+      });
+    }
   }
   
   await question(colorText('Press Enter to continue...', 'yellow'));
 }
 
-async function addModelToProvider() {
+// Add Custom Models submenu
+async function addCustomModelsMenu() {
+  const menuOptions = [
+    { id: 1, text: 'Add Models to Existing Provider', action: () => addModelsToExistingProvider() },
+    { id: 2, text: 'Add Custom Provider', action: () => addCustomProviderCLI() },
+    { id: 3, text: 'Back to Model Management', action: () => 'back' }
+  ];
+  
+  let currentIndex = 0;
+  
+  while (true) {
+    // Build screen content in memory (double buffering)
+    let screenContent = '';
+    
+    // Add header
+    screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
+    screenContent += colorText('=============================', 'cyan') + '\n';
+    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
+    screenContent += '\n';
+    
+    screenContent += colorText('Add Custom Models', 'magenta') + '\n';
+    screenContent += colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan') + '\n';
+    screenContent += colorText('Navigation is circular', 'dim') + '\n';
+    screenContent += '\n';
+    
+    // Display menu options
+    menuOptions.forEach((option, index) => {
+      const isCurrent = index === currentIndex;
+      const indicator = isCurrent ? colorText('●', 'green') : colorText('○', 'dim');
+      const optionText = isCurrent ? colorText(option.text, 'bright') : colorText(option.text, 'yellow');
+      
+      screenContent += `${indicator} ${optionText}\n`;
+    });
+    
+    // Clear screen and output entire buffer at once
+    clearScreen();
+    console.log(screenContent);
+    
+    const key = await getKeyPress();
+    
+    if (key === '\u001b[A') {
+      // Up arrow - circular navigation
+      currentIndex = (currentIndex - 1 + menuOptions.length) % menuOptions.length;
+    } else if (key === '\u001b[B') {
+      // Down arrow - circular navigation
+      currentIndex = (currentIndex + 1) % menuOptions.length;
+    } else if (key === '\r') {
+      // Enter - select current option
+      const result = await menuOptions[currentIndex].action();
+      if (result === 'back') {
+        return;
+      }
+    } else if (key === '\u0003') {
+      // Ctrl+C
+      process.exit(0);
+    }
+  }
+}
+
+// Add models to existing custom provider
+async function addModelsToExistingProvider() {
   clearScreen();
   showHeader();
-  console.log(colorText('Add Model to Provider', 'magenta'));
+  console.log(colorText('Add Models to Existing Provider', 'magenta'));
   console.log('');
   
-  const config = await loadConfig();
+  // Get custom providers from config
+  const customProviders = await getCustomProvidersFromConfig();
   
-  if (config.providers.length === 0) {
-    console.log(colorText('No providers available. Please add a provider first.', 'red'));
+  if (customProviders.length === 0) {
+    console.log(colorText('No custom providers available. Please add a custom provider first.', 'red'));
     await question(colorText('Press Enter to continue...', 'yellow'));
     return;
   }
@@ -1380,21 +1415,22 @@ async function addModelToProvider() {
     screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
     screenContent += '\n';
     
-    screenContent += colorText('Add Model to Provider', 'magenta') + '\n';
+    screenContent += colorText('Add Models to Existing Provider', 'magenta') + '\n';
     screenContent += colorText('Use ↑↓ arrows to navigate, ENTER to select', 'cyan') + '\n';
     screenContent += colorText('Navigation is circular', 'dim') + '\n';
     screenContent += '\n';
     
-    screenContent += colorText('Select provider:', 'cyan') + '\n';
+    screenContent += colorText('Select custom provider:', 'cyan') + '\n';
     screenContent += '\n';
     
-    // Display providers with arrow key navigation
-    config.providers.forEach((provider, index) => {
+    // Display custom providers with arrow key navigation
+    customProviders.forEach((provider, index) => {
       const isCurrent = index === currentIndex;
       const indicator = isCurrent ? colorText('●', 'green') : colorText('○', 'dim');
       const providerName = isCurrent ? colorText(provider.name, 'bright') : colorText(provider.name, 'yellow');
+      const providerType = isCurrent ? colorText(`(${provider.type})`, 'cyan') : colorText(`(${provider.type})`, 'dim');
       
-      screenContent += `${indicator} ${providerName}\n`;
+      screenContent += `${indicator} ${providerName} ${providerType}\n`;
     });
     
     // Clear screen and output entire buffer at once
@@ -1405,10 +1441,10 @@ async function addModelToProvider() {
     
     if (key === '\u001b[A') {
       // Up arrow - circular navigation
-      currentIndex = (currentIndex - 1 + config.providers.length) % config.providers.length;
+      currentIndex = (currentIndex - 1 + customProviders.length) % customProviders.length;
     } else if (key === '\u001b[B') {
       // Down arrow - circular navigation
-      currentIndex = (currentIndex + 1) % config.providers.length;
+      currentIndex = (currentIndex + 1) % customProviders.length;
     } else if (key === '\r') {
       // Enter - select current provider
       break;
@@ -1418,31 +1454,73 @@ async function addModelToProvider() {
     }
   }
   
-  const provider = config.providers[currentIndex];
-  const modelName = await question(colorText('Enter new model name: ', 'cyan'));
+  const provider = customProviders[currentIndex];
   
-  // Find the provider in customProviders and add the model
-  const customProvider = config.customProviders.find(p => p.id === provider.id);
-  if (customProvider) {
-    customProvider.models.push({
-      name: modelName,
-      id: Date.now().toString() + '_model'
-    });
-  } else {
-    // If it's a verified provider, we need to convert it to custom
-    provider.models.push({
-      name: modelName,
-      id: Date.now().toString() + '_model'
-    });
-    // Remove from verifiedProviders and add to customProviders
-    if (config.verifiedProviders && config.verifiedProviders[provider.id]) {
-      delete config.verifiedProviders[provider.id];
+  console.log('');
+  console.log(colorText('Selected provider: ', 'cyan') + colorText(provider.name, 'white'));
+  console.log('');
+  
+  // Ask if user wants to add multiple models
+  console.log(colorText('Do you want to add multiple models?', 'cyan'));
+  console.log(colorText('1. Add single model', 'yellow'));
+  console.log(colorText('2. Add multiple models', 'yellow'));
+  
+  const modelChoice = await question(colorText('Enter choice (1 or 2): ', 'cyan'));
+  
+  let modelsAdded = 0;
+  
+  if (modelChoice === '2') {
+    // Multiple models mode
+    console.log('');
+    console.log(colorText('Enter model names (one per line, empty line to finish):', 'cyan'));
+    console.log(colorText('Examples: gpt-4, gpt-4-turbo, gpt-3.5-turbo', 'dim'));
+    console.log('');
+    
+    while (true) {
+      const modelName = await question(colorText('Model name: ', 'cyan'));
+      if (!modelName.trim()) break;
+      
+      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') + '_' + Date.now();
+      const modelData = {
+        name: modelName.trim(),
+        id: modelId
+      };
+      
+      const success = await addModelToCustomProvider(provider.id, modelData);
+      if (success) {
+        modelsAdded++;
+        console.log(colorText(`✓ Added model: ${modelName.trim()}`, 'green'));
+      } else {
+        console.log(colorText(`✗ Failed to add model: ${modelName.trim()}`, 'red'));
+      }
     }
-    config.customProviders.push(provider);
+  } else {
+    // Single model mode
+    const modelName = await question(colorText('Enter model name: ', 'cyan'));
+    if (modelName.trim()) {
+      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') + '_' + Date.now();
+      const modelData = {
+        name: modelName.trim(),
+        id: modelId
+      };
+      
+      const success = await addModelToCustomProvider(provider.id, modelData);
+      if (success) {
+        modelsAdded = 1;
+        console.log(colorText(`✓ Added model: ${modelName.trim()}`, 'green'));
+      } else {
+        console.log(colorText(`✗ Failed to add model: ${modelName.trim()}`, 'red'));
+      }
+    }
   }
   
-  await saveConfig(config);
-  console.log(colorText('Model added successfully!', 'green'));
+  if (modelsAdded > 0) {
+    console.log('');
+    console.log(colorText(`Successfully added ${modelsAdded} model(s) to ${provider.name}`, 'green'));
+  } else {
+    console.log(colorText('No models were added.', 'yellow'));
+  }
+  
   await question(colorText('\nPress Enter to continue...', 'yellow'));
 }
 
@@ -1698,9 +1776,9 @@ async function showMainMenu() {
 
 async function showModelMenu() {
   const menuOptions = [
-    { id: 1, text: 'Add Provider', action: () => addProvider() },
-    { id: 2, text: 'List Existing Providers', action: () => listProviders() },
-    { id: 3, text: 'Add Model to Provider', action: () => addModelToProvider() },
+    { id: 1, text: 'Add Verified Provider', action: () => addVerifiedProvider() },
+    { id: 2, text: 'Add Custom Models', action: () => addCustomModelsMenu() },
+    { id: 3, text: 'List Existing Providers', action: () => listProviders() },
     { id: 4, text: 'Debug Info', action: () => showDebugInfo() },
     { id: 5, text: 'Back to Main Menu', action: () => 'back' }
   ];
@@ -1770,4 +1848,4 @@ if (import.meta.url === `file://${process.argv[1]}` ||
   showMainMenu();
 }
 
-export { showMainMenu, addProvider, listProviders, selectModelsCircular, runStreamingBenchmark, loadConfig, saveConfig };
+export { showMainMenu, listProviders, selectModelsCircular, runStreamingBenchmark, loadConfig, saveConfig };
