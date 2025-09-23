@@ -1,20 +1,60 @@
 {
-  "name": "test-ai-speed",
+  "name": "ai-speedometer",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A comprehensive CLI tool for benchmarking AI models across multiple providers with parallel execution and professional metrics",
+  "main": "cli.js",
+  "bin": {
+    "ai-speedometer": "dist/ai-speedometer",
+    "aispeed": "dist/ai-speedometer"
+  },
+  "preferGlobal": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
+    "start": "node cli.js",
     "cli": "node cli.js",
     "cli:debug": "node cli.js --debug",
     "benchmark": "node benchmark-rest.js",
     "benchmark-all": "node benchmark-rest.js --all",
     "benchmark-track": "node benchmark-rest.js --all --track",
+    "build": "esbuild cli.js --bundle --platform=node --outfile=dist/ai-speedometer --format=esm --minify --external:jsonc-parser --external:dotenv && sed -i '1s|^.*|#!/usr/bin/env node|' dist/ai-speedometer",
+    "build:dev": "esbuild cli.js --bundle --platform=node --outfile=dist/ai-speedometer --format=esm --external:jsonc-parser --external:dotenv && sed -i '1s|^.*|#!/usr/bin/env node|' dist/ai-speedometer",
+    "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
+  "keywords": [
+    "ai",
+    "benchmark",
+    "cli",
+    "speedometer",
+    "performance",
+    "llm",
+    "models",
+    "testing",
+    "openai",
+    "anthropic",
+    "ai-sdk",
+    "parallel",
+    "metrics"
+  ],
+  "author": "ai-speedometer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aptdnfapt/Ai-speedometer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aptdnfapt/Ai-speedometer/issues"
+  },
+  "homepage": "https://github.com/aptdnfapt/Ai-speedometer#readme",
+  "files": [
+    "dist/ai-speedometer",
+    "docs/",
+    "README.md",
+    "ai-benchmark-config.json.template"
+  ],
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.17",
     "@ai-sdk/openai-compatible": "^1.0.17",
@@ -22,5 +62,8 @@
     "cli-table3": "^0.6.5",
     "dotenv": "^17.2.2",
     "jsonc-parser": "^3.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
   }
 }

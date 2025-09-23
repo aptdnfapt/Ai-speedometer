@@ -1764,7 +1764,9 @@ process.on('SIGINT', () => {
 });
 
 // Start the CLI
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === `file://${process.argv[1]}` || 
+    process.argv.length === 2 || 
+    (process.argv.length === 3 && process.argv[2] === '--debug')) {
   showMainMenu();
 }
 

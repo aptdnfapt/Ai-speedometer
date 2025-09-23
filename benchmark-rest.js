@@ -534,8 +534,8 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Run main function
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run main function only when this file is run directly (not when imported)
+if (import.meta.url === `file://${process.argv[1]}` && process.argv[1].endsWith('benchmark-rest.js')) {
   main();
 }
 
