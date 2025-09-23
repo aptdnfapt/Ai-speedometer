@@ -113,34 +113,78 @@ async function fetchFromAPI() {
   }
 }
 
+// Load custom verified providers from embedded JSON
+function loadCustomVerifiedProviders() {
+  try {
+    const customProvidersPath = path.join(process.cwd(), 'custom-verified-providers.json');
+    if (fs.existsSync(customProvidersPath)) {
+      const customData = fs.readFileSync(customProvidersPath, 'utf8');
+      const customProviders = JSON.parse(customData);
+      
+      // Transform the custom providers to match our format
+      const providers = [];
+      
+      if (customProviders['custom-verified-providers']) {
+        for (const [, providerData] of Object.entries(customProviders['custom-verified-providers'])) {
+          if (providerData.id && providerData.name && providerData.models) {
+            const provider = {
+              id: providerData.id,
+              name: providerData.name,
+              baseUrl: providerData.baseUrl || '',
+              type: providerData.type || 'openai-compatible',
+              models: Object.values(providerData.models).map(model => ({
+                id: model.id,
+                name: model.name
+              }))
+            };
+            providers.push(provider);
+          }
+        }
+      }
+      
+      return providers;
+    }
+  } catch (error) {
+    console.warn('Warning: Could not load custom verified providers:', error.message);
+  }
+  return [];
+}
+
 // Transform models.dev data to our format
 function transformModelsDevData(apiData) {
-  if (!apiData) {
-    return FALLBACK_PROVIDERS;
-  }
-
-  // Transform the flat structure from models.dev to our expected format
   const providers = [];
   
-  for (const [, providerData] of Object.entries(apiData)) {
-    if (providerData.id && providerData.name && providerData.models) {
-      const provider = {
-        id: providerData.id,
-        name: providerData.name,
-        baseUrl: providerData.api || providerData.baseUrl || '',
-        type: providerData.npm ? 
-          (providerData.npm.includes('anthropic') ? 'anthropic' : 'openai-compatible') : 
-          'openai-compatible',
-        models: Object.values(providerData.models).map(model => ({
-          id: model.id,
-          name: model.name
-        }))
-      };
-      providers.push(provider);
+  // Load custom verified providers first
+  const customProviders = loadCustomVerifiedProviders();
+  providers.push(...customProviders);
+  
+  // If API data is available, add models.dev providers
+  if (apiData) {
+    for (const [, providerData] of Object.entries(apiData)) {
+      if (providerData.id && providerData.name && providerData.models) {
+        const provider = {
+          id: providerData.id,
+          name: providerData.name,
+          baseUrl: providerData.api || providerData.baseUrl || '',
+          type: providerData.npm ? 
+            (providerData.npm.includes('anthropic') ? 'anthropic' : 'openai-compatible') : 
+            'openai-compatible',
+          models: Object.values(providerData.models).map(model => ({
+            id: model.id,
+            name: model.name
+          }))
+        };
+        providers.push(provider);
+      }
     }
   }
 
-  return providers.length > 0 ? providers : FALLBACK_PROVIDERS;
+  // If no providers (neither custom nor API), use fallback
+  if (providers.length === 0) {
+    return FALLBACK_PROVIDERS;
+  }
+
+  return providers;
 }
 
 // Get all providers (with caching and fallback)
