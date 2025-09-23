@@ -1,6 +1,6 @@
 {
   "name": "ai-speedometer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A comprehensive CLI tool for benchmarking AI models across multiple providers with parallel execution and professional metrics",
   "main": "cli.js",
   "bin": {
