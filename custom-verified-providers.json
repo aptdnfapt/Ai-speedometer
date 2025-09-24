@@ -31,6 +31,67 @@
           "name": "GLM-4.5-air-china-anth"
         }
       }
+    },
+    "extra-models-dev": {
+      "chutes": {
+        "deepseek-ai/DeepSeek-V3.1-Terminus": {
+          "id": "deepseek-ai/DeepSeek-V3.1-Terminus",
+          "name": "DeepSeek V3.1 Terminus"
+        },
+        "meituan-longcat/LongCat-Flash-Thinking-FP8": {
+          "id": "meituan-longcat/LongCat-Flash-Thinking-FP8",
+          "name": "LongCat Flash Thinking FP8"
+        },
+        "zai-org/GLM-4.5-turbo": {
+          "id": "zai-org/GLM-4.5-turbo",
+          "name": "GLM-4.5 Turbo"
+        },
+        "deepseek-ai/DeepSeek-V3.1-turbo": {
+          "id": "deepseek-ai/DeepSeek-V3.1-turbo",
+          "name": "DeepSeek V3.1 Turbo"
+        }
+      }
+    },
+    "nanogpt-plan": {
+      "id": "nanogpt-plan",
+      "name": "nanogpt-plan",
+      "baseUrl": "https://nano-gpt.com/api/v1",
+      "type": "openai-compatible",
+      "models": {
+        "deepseek-ai/DeepSeek-V3.1-Terminus": {
+          "id": "deepseek-ai/DeepSeek-V3.1-Terminus",
+          "name": "DeepSeek V3.1 Terminus"
+        },
+        "deepseek-ai/DeepSeek-V3.1": {
+          "id": "deepseek-ai/DeepSeek-V3.1",
+          "name": "DeepSeek V3.1"
+        },
+        
+        "deepseek-ai/DeepSeek-V3.1-Terminus:thinking": {
+          "id": "deepseek-ai/DeepSeek-V3.1-Terminus:thinking",
+          "name": "DeepSeek V3.1 Terminus Thinking"
+        },
+        "zai-org/GLM-4.5-FP8": {
+          "id": "zai-org/GLM-4.5-FP8",
+          "name": "GLM 4.5 FP8"
+        },
+        "zai-org/GLM-4.5-FP8:thinking": {
+          "id": "zai-org/GLM-4.5-FP8:thinking",
+          "name": "GLM 4.5 FP8 Thinking"
+        },
+        "zai-org/GLM-4.5-Air": {
+          "id": "zai-org/GLM-4.5-Air",
+          "name": "GLM 4.5 Air"
+        },
+        "moonshotai/Kimi-K2-Instruct": {
+          "id": "moonshotai/Kimi-K2-Instruct",
+          "name": "Kimi K2 Instruct"
+        },
+        "moonshotai/Kimi-K2-Instruct-0905": {
+          "id": "moonshotai/Kimi-K2-Instruct-0905",
+          "name": "Kimi K2 Instruct 0905"
+        }
+      }
     }
   }
 }

@@ -126,6 +126,11 @@ function loadCustomVerifiedProviders() {
       
       if (customProviders['custom-verified-providers']) {
         for (const [, providerData] of Object.entries(customProviders['custom-verified-providers'])) {
+          // Skip the extra-models-dev section as it's handled separately
+          if (providerData.id === 'extra-models-dev') {
+            continue;
+          }
+          
           if (providerData.id && providerData.name && providerData.models) {
             const provider = {
               id: providerData.id,
@@ -150,6 +155,33 @@ function loadCustomVerifiedProviders() {
   return [];
 }
 
+// Load extra models from custom-verified-providers.json
+function loadExtraModels() {
+  try {
+    const customProvidersPath = path.join(process.cwd(), 'custom-verified-providers.json');
+    if (fs.existsSync(customProvidersPath)) {
+      const customData = fs.readFileSync(customProvidersPath, 'utf8');
+      const customProviders = JSON.parse(customData);
+      
+      const extraModels = {};
+      
+      if (customProviders['custom-verified-providers'] && customProviders['custom-verified-providers']['extra-models-dev']) {
+        for (const [providerId, models] of Object.entries(customProviders['custom-verified-providers']['extra-models-dev'])) {
+          extraModels[providerId] = Object.values(models).map(model => ({
+            id: model.id,
+            name: model.name
+          }));
+        }
+      }
+      
+      return extraModels;
+    }
+  } catch (error) {
+    console.warn('Warning: Could not load extra models:', error.message);
+  }
+  return {};
+}
+
 // Transform models.dev data to our format
 function transformModelsDevData(apiData) {
   const providers = [];
@@ -158,10 +190,24 @@ function transformModelsDevData(apiData) {
   const customProviders = loadCustomVerifiedProviders();
   providers.push(...customProviders);
   
+  // Load extra models from custom-verified-providers.json
+  const extraModels = loadExtraModels();
+  
   // If API data is available, add models.dev providers
   if (apiData) {
     for (const [, providerData] of Object.entries(apiData)) {
       if (providerData.id && providerData.name && providerData.models) {
+        // Start with models from models.dev
+        const models = Object.values(providerData.models).map(model => ({
+          id: model.id,
+          name: model.name
+        }));
+        
+        // Add extra models if they exist for this provider
+        if (extraModels[providerData.id]) {
+          models.push(...extraModels[providerData.id]);
+        }
+        
         const provider = {
           id: providerData.id,
           name: providerData.name,
@@ -169,10 +215,7 @@ function transformModelsDevData(apiData) {
           type: providerData.npm ? 
             (providerData.npm.includes('anthropic') ? 'anthropic' : 'openai-compatible') : 
             'openai-compatible',
-          models: Object.values(providerData.models).map(model => ({
-            id: model.id,
-            name: model.name
-          }))
+          models: models
         };
         providers.push(provider);
       }
@@ -203,8 +246,18 @@ async function getAllProviders() {
     return transformedData;
   }
 
-  // Fallback to built-in data
-  return FALLBACK_PROVIDERS;
+  // Fallback to built-in data, but add extra models
+  const fallbackProviders = [...FALLBACK_PROVIDERS];
+  const extraModels = loadExtraModels();
+  
+  // Add extra models to fallback providers
+  fallbackProviders.forEach(provider => {
+    if (extraModels[provider.id]) {
+      provider.models.push(...extraModels[provider.id]);
+    }
+  });
+  
+  return fallbackProviders;
 }
 
 // Search providers by query
@@ -240,8 +293,18 @@ async function refreshData() {
     return cachedData.providers;
   }
   
-  // Ultimate fallback
-  return FALLBACK_PROVIDERS;
+  // Ultimate fallback with extra models
+  const fallbackProviders = [...FALLBACK_PROVIDERS];
+  const extraModels = loadExtraModels();
+  
+  // Add extra models to fallback providers
+  fallbackProviders.forEach(provider => {
+    if (extraModels[provider.id]) {
+      provider.models.push(...extraModels[provider.id]);
+    }
+  });
+  
+  return fallbackProviders;
 }
 
 // Clear cache
