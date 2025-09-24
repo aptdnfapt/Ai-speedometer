@@ -25,12 +25,16 @@ npm install -g ai-speedometer
    ```
 
 2. **Choose Model Provider**
-   - Verified providers (OpenAI, Anthropic, Google) - auto-configured
-   - Custom providers (Ollama, local models) - add your base URL
+    - Verified providers (OpenAI, Anthropic, Google) - auto-configured
+    - Custom verified providers (pre-configured trusted providers) - add API key
+    - Custom providers (Ollama, local models) - add your base URL
 
 3. **Add API Key**
    - Get API keys from your provider's dashboard
-   - Enter when prompted - stored securely
+   - Enter when prompted - stored securely in:
+     - `~/.local/share/opencode/auth.json` (primary storage)
+     - `~/.config/ai-speedometer/ai-benchmark-config.json` (backup storage)
+     - Both files store verified and custom verified provider keys
 
 4. **Run Benchmark**
    ```bash
@@ -50,6 +54,16 @@ aispeed
 # Debug mode
 ai-speedometer --debug
 ```
+
+## Configuration Files
+
+API keys and configuration are stored in:
+
+- **Verified + Custom Verified Providers**: 
+  - Primary: `~/.local/share/opencode/auth.json`
+  - Backup: `~/.config/ai-speedometer/ai-benchmark-config.json` (verifiedProviders section)
+- **Custom Providers**: `~/.config/ai-speedometer/ai-benchmark-config.json` (customProviders section)
+- **Provider Definitions**: `./custom-verified-providers.json`
 
 ## Requirements
 

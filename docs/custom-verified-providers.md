@@ -156,13 +156,34 @@ Available Providers:
 
 ### Authentication Storage
 
-API keys for custom verified providers are stored in `~/.config/ai-speedometer/ai-benchmark-config.json`:
+API keys for custom verified providers are stored in **both locations** for redundancy:
+
+```json
+// Primary storage: ~/.local/share/opencode/auth.json
+{
+  "zai-code-anth": {
+    "type": "api",
+    "key": "user-api-key-here"
+  }
+}
+
+// Backup storage: ~/.config/ai-speedometer/ai-benchmark-config.json  
+{
+  "verifiedProviders": {
+    "zai-code-anth": "user-api-key-here"
+  }
+}
+```
 
 ```json
 {
-  "verifiedProviders": {
-    "zai-code-anth": "user-api-key-here",
-    "nanogpt-plan": "another-api-key"
+  "zai-code-anth": {
+    "type": "api",
+    "key": "user-api-key-here"
+  },
+  "nanogpt-plan": {
+    "type": "api", 
+    "key": "another-api-key"
   }
 }
 ```
