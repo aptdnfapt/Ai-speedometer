@@ -12,6 +12,8 @@ Models.dev is a centralized registry of AI model providers and their models. It 
 - **Model Catalogs:** Available models for each provider with their names and IDs
 - **Provider Classification:** Categorization by provider type (OpenAI-compatible, Anthropic, Google, etc.)
 
+**Note:** For information about custom verified providers (pre-configured providers not in models.dev), see [Custom Verified Providers](custom-verified-providers.md).
+
 ## Integration Architecture
 
 ### Core Components
@@ -70,7 +72,7 @@ User Request → CLI → getAllProviders() → Models.dev API → Provider Data
 
 ### 2. Dual Provider System Flow
 
-The system now manages two distinct provider types:
+The system now manages three distinct provider types:
 
 #### Verified Providers (models.dev integration)
 ```
@@ -83,6 +85,18 @@ Provider Selection → API Key Input → auth.json Storage → Provider Activati
 2. **API Key Input:** User enters their API key for the provider
 3. **Secure Storage:** Key is stored in `~/.local/share/opencode/auth.json`
 4. **Provider Activation:** Provider becomes available in model selection
+
+#### Custom Verified Providers (pre-configured)
+```
+Pre-configured Definition → custom-verified-providers.json → API Key Input → Integration
+```
+
+**Custom Verified Provider Process:**
+
+1. **Pre-configured Definition:** Providers defined in `custom-verified-providers.json`
+2. **API Key Input:** User enters API key for the pre-configured provider
+3. **Authentication Storage:** Key stored in auth.json alongside verified providers
+4. **Integration:** Available immediately in model selection interface
 
 #### Custom Providers (user-defined)
 ```
@@ -105,9 +119,10 @@ Verified Providers → Custom Providers → Combine → Present to User
 **Model Assembly Process:**
 
 1. **Verified Models:** Load models from authenticated providers in auth.json
-2. **Custom Models:** Load user-defined models from ai-benchmark-config.json
-3. **Deduplication:** Ensure no duplicate models in final list
-4. **Presentation:** Display combined list in model selection interface
+2. **Custom Verified Models:** Load models from custom-verified-providers.json with API keys
+3. **Custom Models:** Load user-defined models from ai-benchmark-config.json
+4. **Deduplication:** Ensure no duplicate models in final list
+5. **Presentation:** Display combined list in model selection interface
 
 ## Configuration Files and Locations
 
@@ -120,6 +135,10 @@ Verified Providers → Custom Providers → Combine → Present to User
 #### AI Speedometer Config (Custom Providers)
 - **ai-benchmark-config.json:** `~/.config/ai-speedometer/ai-benchmark-config.json` (custom providers)
 - **Cache:** `~/.cache/ai-speedometer/models.json` (models.dev API cache)
+
+#### Custom Verified Providers
+- **custom-verified-providers.json:** `./custom-verified-providers.json` (pre-configured provider definitions)
+- **Authentication:** Same as verified providers (stored in auth.json)
 
 ### Configuration Structures
 

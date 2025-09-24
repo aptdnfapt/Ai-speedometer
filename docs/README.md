@@ -7,6 +7,7 @@ Welcome to the documentation for the AI Speedometer benchmark CLI. This document
 - [User Guide](README.md) - Main README with installation and usage
 - [Bug Fixes v1.0](bug-fixes-v1.md) - Critical issues resolved in latest version
 - [Models.dev Integration](models-dev-integration.md) - How provider and model loading works
+- [Custom Verified Providers](custom-verified-providers.md) - Adding and configuring custom verified providers
 
 ## Documentation Structure
 
@@ -26,12 +27,14 @@ Welcome to the documentation for the AI Speedometer benchmark CLI. This document
 
 #### Architecture
 - [Models.dev Integration](models-dev-integration.md) - Provider ecosystem and API integration
+- [Custom Verified Providers](custom-verified-providers.md) - Pre-configured provider setup and management
 - [Bug Fixes](bug-fixes-v1.md) - Critical issues and their solutions
 
 #### Configuration
 - **Provider Configuration** - Setting up different AI providers
 - **Authentication** - API key management and security
 - **Custom Providers** - Adding your own AI providers
+- **Custom Verified Providers** - Pre-configured trusted providers
 
 #### Development
 - **Code Structure** - Organization of modules and components
@@ -42,14 +45,19 @@ Welcome to the documentation for the AI Speedometer benchmark CLI. This document
 
 ### Providers and Models
 
-The system supports two types of providers:
+The system supports three types of providers:
 
 1. **Verified Providers** - From models.dev ecosystem
    - OpenAI, Anthropic, Google, and other major providers
    - Automatically updated with latest models
    - Pre-configured endpoints and authentication
 
-2. **Custom Providers** - User-defined providers
+2. **Custom Verified Providers** - Pre-configured trusted providers
+   - Curated providers not in models.dev but treated as verified
+   - Pre-configured with specific models and endpoints
+   - Available in `custom-verified-providers.json`
+
+3. **Custom Providers** - User-defined providers
    - Your own AI endpoints or local models
    - Full configuration flexibility
    - Support for OpenAI-compatible APIs
@@ -96,6 +104,15 @@ See [Bug Fixes v1.0](bug-fixes-v1.md) for detailed technical information.
 
 See [Models.dev Integration](models-dev-integration.md) for complete architectural details.
 
+### Custom Verified Providers
+
+- **Pre-configured Providers** - Curated list of trusted providers not in models.dev
+- **Structured Configuration** - Standardized format for provider definitions
+- **Model Management** - Predefined models with display names and API IDs
+- **Authentication Integration** - Seamless integration with existing auth system
+
+See [Custom Verified Providers](custom-verified-providers.md) for complete setup and configuration guide.
+
 ## Getting Help
 
 ### Troubleshooting
@@ -134,6 +151,7 @@ We welcome contributions! See the main project README for guidelines on:
 | [Main README](../README.md) | Installation, setup, and basic usage | Users |
 | [Bug Fixes v1.0](bug-fixes-v1.md) | Critical issues and solutions | Developers/Users |
 | [Models.dev Integration](models-dev-integration.md) | Provider ecosystem architecture | Developers |
+| [Custom Verified Providers](custom-verified-providers.md) | Pre-configured provider setup | Developers/Users |
 
 ## Quick Links
 
