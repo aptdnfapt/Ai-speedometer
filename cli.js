@@ -21,7 +21,10 @@ import {
   getVerifiedProvidersFromConfig,
   addCustomProvider,
   addModelToCustomProvider,
-  getAIConfigDebugPaths
+  getAIConfigDebugPaths,
+  addToRecentModels,
+  getRecentModels,
+  cleanupRecentModelsFromConfig
 } from './ai-config.js';
 import 'dotenv/config';
 import Table from 'cli-table3';
@@ -203,9 +206,12 @@ async function selectModelsCircular() {
   showHeader();
   console.log(colorText('Select Models for Benchmark', 'magenta'));
   console.log('');
-  
+   
   const config = await loadConfig();
-  
+   
+  // Clean up recent models from main config and migrate to cache
+  await cleanupRecentModelsFromConfig();
+   
   if (config.providers.length === 0) {
     console.log(colorText('No providers available. Please add a provider first.', 'red'));
     await question(colorText('Press Enter to continue...', 'yellow'));
@@ -230,16 +236,38 @@ async function selectModelsCircular() {
     });
   });
   
+  // Load recent models
+  const recentModelsData = await getRecentModels();
+  
+  // Create a mapping of recent models to actual model objects
+  const recentModelObjects = [];
+  recentModelsData.forEach(recentModel => {
+    const modelObj = allModels.find(model => 
+      model.id === recentModel.modelId && 
+      model.providerName === recentModel.providerName
+    );
+    if (modelObj) {
+      recentModelObjects.push({
+        ...modelObj,
+        isRecent: true
+      });
+    }
+  });
+  
   let currentIndex = 0;
   let currentPage = 0;
   let searchQuery = '';
-  let filteredModels = [...allModels];
   
   // Create a reusable filter function to avoid code duplication
   const filterModels = (query) => {
     if (!query.trim()) {
-      return [...allModels];
+      // When search is empty, return the combined list with recent models at top
+      const recentModelIds = new Set(recentModelObjects.map(m => m.id));
+      const nonRecentModels = allModels.filter(model => !recentModelIds.has(model.id));
+      return [...recentModelObjects, ...nonRecentModels];
     }
+    
+    // When searching, search through all models (no recent section)
     const lowercaseQuery = query.toLowerCase();
     return allModels.filter(model => {
       const modelNameMatch = model.name.toLowerCase().includes(lowercaseQuery);
@@ -250,6 +278,9 @@ async function selectModelsCircular() {
       return modelNameMatch || providerNameMatch || providerIdMatch || providerTypeMatch;
     });
   };
+  
+  // Initialize filtered models using the filter function
+  let filteredModels = filterModels('');
   
   // Debounce function to reduce filtering frequency
   let searchTimeout;
@@ -275,7 +306,7 @@ async function selectModelsCircular() {
     screenContent += colorText('Type to search (real-time filtering)', 'cyan') + '\n';
     screenContent += colorText('Press "A" to select all models, "N" to deselect all', 'cyan') + '\n';
     screenContent += colorText('Circle states: ●=Current+Selected  ○=Current+Unselected  ●=Selected  ○=Unselected', 'dim') + '\n';
-    screenContent += colorText('Quick run: ENTER on any model | Multi-select: TAB then ENTER', 'dim') + '\n';
+    screenContent += colorText('Quick run: ENTER on any model | Multi-select: TAB then ENTER | Recent: R', 'dim') + '\n';
     screenContent += '\n';
     
     // Search interface - always visible
@@ -294,13 +325,51 @@ async function selectModelsCircular() {
     const endIndex = Math.min(startIndex + visibleItemsCount, filteredModels.length);
     
     // Display models in a vertical layout with pagination
-    screenContent += colorText('Available Models:', 'yellow') + '\n';
-    screenContent += '\n';
+    let hasRecentModelsInCurrentPage = false;
+    let recentSectionDisplayed = false;
+    let nonRecentSectionDisplayed = false;
     
+    // Only show recent section when search is empty and we have recent models
+    const showRecentSection = searchQuery.length === 0 && recentModelObjects.length > 0;
+    
+    // Check if current page contains any recent models (only when search is empty)
+    if (showRecentSection) {
+      for (let i = startIndex; i < endIndex; i++) {
+        if (filteredModels[i].isRecent) {
+          hasRecentModelsInCurrentPage = true;
+          break;
+        }
+      }
+    }
+    
+    // Display models with proper section headers
     for (let i = startIndex; i < endIndex; i++) {
       const model = filteredModels[i];
       const isCurrent = i === currentIndex;
-      const isSelected = model.selected;
+      // For recent models, check selection state from the original model
+      let isSelected;
+      if (model.isRecent) {
+        const originalModelIndex = allModels.findIndex(originalModel => 
+          originalModel.id === model.id && 
+          originalModel.providerName === model.providerName &&
+          !originalModel.isRecent
+        );
+        isSelected = originalModelIndex !== -1 ? allModels[originalModelIndex].selected : false;
+      } else {
+        isSelected = model.selected;
+      }
+      
+      // Show recent section header if we encounter a recent model and haven't shown the header yet
+      if (model.isRecent && !recentSectionDisplayed && hasRecentModelsInCurrentPage && showRecentSection) {
+        screenContent += colorText('-------recent--------', 'dim') + '\n';
+        recentSectionDisplayed = true;
+      }
+      
+      // Show separator between recent and non-recent models
+      if (!model.isRecent && recentSectionDisplayed && !nonRecentSectionDisplayed && showRecentSection) {
+        screenContent += colorText('-------recent--------', 'dim') + '\n';
+        nonRecentSectionDisplayed = true;
+      }
       
       // Single circle that shows both current state and selection
       let circle;
@@ -378,10 +447,28 @@ async function selectModelsCircular() {
       }
     } else if (key === '\t') {
       // Tab - select/deselect current model
-      const actualModelIndex = allModels.indexOf(filteredModels[currentIndex]);
+      const currentModel = filteredModels[currentIndex];
+      let actualModelIndex;
+      
+      if (currentModel.isRecent) {
+        // For recent models, find by matching the original model ID and provider name
+        actualModelIndex = allModels.findIndex(model => 
+          model.id === currentModel.id && 
+          model.providerName === currentModel.providerName &&
+          !model.isRecent // Don't match the recent copy, match the original
+        );
+      } else {
+        // For regular models, use the standard matching
+        actualModelIndex = allModels.findIndex(model => 
+          model.id === currentModel.id && model.providerName === currentModel.providerName
+        );
+      }
+      
       if (actualModelIndex !== -1) {
         allModels[actualModelIndex].selected = !allModels[actualModelIndex].selected;
       }
+      // Force immediate screen redraw by continuing to next iteration
+      continue;
     } else if (key === '\r') {
       // Enter - run benchmark on selected models
       const currentModel = filteredModels[currentIndex];
@@ -441,6 +528,35 @@ async function selectModelsCircular() {
         });
       } else {
         // If search is active, add 'N' to search query
+        searchQuery += key;
+        debouncedFilter(searchQuery, (newFilteredModels) => {
+          filteredModels = newFilteredModels;
+          currentIndex = 0;
+          currentPage = 0;
+        });
+      }
+    } else if (key === 'R' || key === 'r') {
+      // Run recent models - only when search is empty and we have recent models
+      if (searchQuery.length === 0 && recentModelObjects.length > 0) {
+        // Deselect all models first
+        allModels.forEach(model => model.selected = false);
+        
+        // Select all recent models by finding the original models
+        recentModelObjects.forEach(recentModel => {
+          const actualModelIndex = allModels.findIndex(model => 
+            model.id === recentModel.id && 
+            model.providerName === recentModel.providerName &&
+            !model.isRecent // Match the original, not the recent copy
+          );
+          if (actualModelIndex !== -1) {
+            allModels[actualModelIndex].selected = true;
+          }
+        });
+        
+        // Break out of loop to run benchmark
+        break;
+      } else {
+        // If search is active or no recent models, add 'R' to search query
         searchQuery += key;
         debouncedFilter(searchQuery, (newFilteredModels) => {
           filteredModels = newFilteredModels;
@@ -653,11 +769,11 @@ async function runStreamingBenchmark(models) {
   console.log('');
   console.log(colorText('All benchmarks completed!', 'green'));
   
-  await displayColorfulResults(results, 'AI SDK');
+  await displayColorfulResults(results, 'AI SDK', models);
 }
 
 // Colorful results display with comprehensive table and enhanced bars
-async function displayColorfulResults(results, method = 'AI SDK') {
+async function displayColorfulResults(results, method = 'AI SDK', models = []) {
   clearScreen();
   showHeader();
   console.log(colorText('BENCHMARK RESULTS', 'magenta'));
@@ -818,6 +934,26 @@ async function displayColorfulResults(results, method = 'AI SDK') {
       console.log(colorText(`${result.model} (${result.provider}): ${result.error}`, 'red'));
     });
     console.log('');
+  }
+  
+  // Add successful models to recent models list
+  const successfulModels = results
+    .filter(r => r.success)
+    .map(r => {
+      // Find the actual model object that matches this benchmark result
+      const modelObj = models.find(model => 
+        model.name === r.model && model.providerName === r.provider
+      );
+      
+      return {
+        modelId: modelObj ? modelObj.id : r.model, // Use actual ID if found, fallback to name
+        modelName: r.model,
+        providerName: r.provider
+      };
+    });
+  
+  if (successfulModels.length > 0) {
+    await addToRecentModels(successfulModels);
   }
   
   console.log(colorText('Benchmark completed!', 'green'));
@@ -1695,7 +1831,27 @@ async function runRestApiBenchmark(models) {
   console.log('');
   console.log(colorText('All REST API benchmarks completed!', 'green'));
   
-  await displayColorfulResults(results, 'REST API');
+  await displayColorfulResults(results, 'REST API', models);
+  
+  // Add successful models to recent models list
+  const successfulModels = results
+    .filter(r => r.success)
+    .map(r => {
+      // Find the actual model object that matches this benchmark result
+      const modelObj = models.find(model => 
+        model.name === r.model && model.providerName === r.provider
+      );
+      
+      return {
+        modelId: modelObj ? modelObj.id : r.model, // Use actual ID if found, fallback to name
+        modelName: r.model,
+        providerName: r.provider
+      };
+    });
+  
+  if (successfulModels.length > 0) {
+    await addToRecentModels(successfulModels);
+  }
 }
 
 // Main menu with arrow key navigation
@@ -1840,7 +1996,13 @@ process.on('SIGINT', () => {
 if (import.meta.url === `file://${process.argv[1]}` || 
     process.argv.length === 2 || 
     (process.argv.length === 3 && process.argv[2] === '--debug')) {
-  showMainMenu();
+  
+  // Clean up recent models from main config and migrate to cache on startup
+  cleanupRecentModelsFromConfig().then(() => {
+    showMainMenu();
+  }).catch(() => {
+    showMainMenu();
+  });
 }
 
 export { showMainMenu, listProviders, selectModelsCircular, runStreamingBenchmark, loadConfig, saveConfig };

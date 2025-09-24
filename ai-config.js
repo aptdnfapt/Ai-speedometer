@@ -9,7 +9,8 @@ const getAIConfigPaths = () => {
   
   return {
     configDir: aiSpeedometerConfigDir,
-    configJson: path.join(aiSpeedometerConfigDir, 'ai-benchmark-config.json')
+    configJson: path.join(aiSpeedometerConfigDir, 'ai-benchmark-config.json'),
+    recentModelsCache: path.join(aiSpeedometerConfigDir, 'recent-models.json')
   };
 };
 
@@ -157,6 +158,104 @@ export const removeVerifiedProvider = async (providerId) => {
   }
   
   return true;
+};
+
+// Add models to recent models list (smart addition - no duplicates, max 5)
+export const addToRecentModels = async (models) => {
+  const { recentModelsCache } = getAIConfigPaths();
+  
+  // Ensure cache directory exists
+  ensureAIConfigDirectory();
+  
+  // Read existing recent models or create empty array
+  let recentModels = [];
+  try {
+    if (fs.existsSync(recentModelsCache)) {
+      const data = fs.readFileSync(recentModelsCache, 'utf8');
+      recentModels = JSON.parse(data);
+    }
+  } catch (error) {
+    // If file doesn't exist or is corrupted, start fresh
+    recentModels = [];
+  }
+  
+  // Process each model
+  models.forEach(model => {
+    // Remove existing entry with same modelId to prevent duplicates
+    recentModels = recentModels.filter(
+      recent => recent.modelId !== model.modelId
+    );
+    
+    // Add new entry to the top (most recent first)
+    recentModels.unshift({
+      modelId: model.modelId,
+      modelName: model.modelName,
+      providerName: model.providerName,
+      timestamp: Date.now()
+    });
+  });
+  
+  // Keep only the 5 most recent models
+  recentModels = recentModels.slice(0, 5);
+  
+  // Write to separate cache file
+  fs.writeFileSync(recentModelsCache, JSON.stringify(recentModels, null, 2));
+  
+  return recentModels;
+};
+
+// Get recent models (persists until manually cleared)
+export const getRecentModels = async () => {
+  const { recentModelsCache } = getAIConfigPaths();
+  
+  try {
+    if (fs.existsSync(recentModelsCache)) {
+      const data = fs.readFileSync(recentModelsCache, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    // If file doesn't exist or is corrupted, return empty array
+  }
+  
+  return [];
+};
+
+// Clear all recent models (manual cleanup)
+export const clearRecentModels = async () => {
+  const { recentModelsCache } = getAIConfigPaths();
+  
+  try {
+    if (fs.existsSync(recentModelsCache)) {
+      fs.unlinkSync(recentModelsCache);
+    }
+  } catch (error) {
+    // Ignore errors if file doesn't exist
+  }
+  
+  return [];
+};
+
+// Clean up recent models from main config file (migration)
+export const cleanupRecentModelsFromConfig = async () => {
+  const config = await readAIConfig();
+  
+  if (config.recentModels && config.recentModels.length > 0) {
+    // Move recent models to cache file
+    const { recentModelsCache } = getAIConfigPaths();
+    ensureAIConfigDirectory();
+    
+    try {
+      fs.writeFileSync(recentModelsCache, JSON.stringify(config.recentModels, null, 2));
+    } catch (error) {
+      console.warn('Warning: Could not migrate recent models to cache:', error.message);
+    }
+    
+    // Remove recent models from main config
+    delete config.recentModels;
+    await writeAIConfig(config);
+  }
+  
+  return config;
 };
 
 // Get config file paths for debugging
