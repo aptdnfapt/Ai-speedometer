@@ -266,149 +266,151 @@ async function selectModelsCircular() {
       const nonRecentModels = allModels.filter(model => !recentModelIds.has(model.id));
       return [...recentModelObjects, ...nonRecentModels];
     }
-    
-    // When searching, search through all models (no recent section)
-    const lowercaseQuery = query.toLowerCase();
+
+    // When searching, search through all models (no recent section) with fuzzy matching
+    const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 0);
     return allModels.filter(model => {
-      const modelNameMatch = model.name.toLowerCase().includes(lowercaseQuery);
-      const providerNameMatch = model.providerName.toLowerCase().includes(lowercaseQuery);
-      const providerIdMatch = model.providerId.toLowerCase().includes(lowercaseQuery);
-      const providerTypeMatch = model.providerType.toLowerCase().includes(lowercaseQuery);
-      
-      return modelNameMatch || providerNameMatch || providerIdMatch || providerTypeMatch;
+      const searchableText = `${model.name} ${model.providerName} ${model.providerId} ${model.providerType}`.toLowerCase();
+      return queryWords.every(word => searchableText.includes(word));
     });
   };
   
   // Initialize filtered models using the filter function
   let filteredModels = filterModels('');
-  
+  let needsRedraw = true;
+
   // Debounce function to reduce filtering frequency
   let searchTimeout;
   const debouncedFilter = (query, callback) => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-      callback(filterModels(query));
+      filteredModels = filterModels(query);
+      needsRedraw = true;
+      callback(filteredModels);
     }, 50); // 50ms debounce delay
   };
-  
+
   while (true) {
-    // Build screen content in memory (double buffering)
-    let screenContent = '';
-    
-    // Add header
-    screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
-    screenContent += colorText('=============================', 'cyan') + '\n';
-    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
-    screenContent += '\n';
-    
-    screenContent += colorText('Select Models for Benchmark', 'magenta') + '\n';
-    screenContent += colorText('Use ↑↓ arrows to navigate, TAB to select/deselect, ENTER to run benchmark', 'cyan') + '\n';
-    screenContent += colorText('Type to search (real-time filtering)', 'cyan') + '\n';
-    screenContent += colorText('Press "A" to select all models, "N" to deselect all', 'cyan') + '\n';
-    screenContent += colorText('Circle states: ●=Current+Selected  ○=Current+Unselected  ●=Selected  ○=Unselected', 'dim') + '\n';
-    screenContent += colorText('Quick run: ENTER on any model | Multi-select: TAB then ENTER | Recent: R', 'dim') + '\n';
-    screenContent += '\n';
-    
-    // Search interface - always visible
-    screenContent += colorText('Search: ', 'yellow') + colorText(searchQuery + '_', 'bright') + '\n';
-    screenContent += '\n';
-    
-    // Calculate pagination
+    // Calculate pagination (needed for key handlers)
     const visibleItemsCount = getVisibleItemsCount(12); // Extra space for search bar
     const totalPages = Math.ceil(filteredModels.length / visibleItemsCount);
-    
-    // Ensure current page is valid
-    if (currentPage >= totalPages) currentPage = totalPages - 1;
-    if (currentPage < 0) currentPage = 0;
-    
-    const startIndex = currentPage * visibleItemsCount;
-    const endIndex = Math.min(startIndex + visibleItemsCount, filteredModels.length);
-    
-    // Display models in a vertical layout with pagination
-    let hasRecentModelsInCurrentPage = false;
-    let recentSectionDisplayed = false;
-    let nonRecentSectionDisplayed = false;
-    
-    // Only show recent section when search is empty and we have recent models
-    const showRecentSection = searchQuery.length === 0 && recentModelObjects.length > 0;
-    
-    // Check if current page contains any recent models (only when search is empty)
-    if (showRecentSection) {
-      for (let i = startIndex; i < endIndex; i++) {
-        if (filteredModels[i].isRecent) {
-          hasRecentModelsInCurrentPage = true;
-          break;
+
+    if (needsRedraw) {
+      // Build screen content in memory (double buffering)
+      let screenContent = '';
+
+      // Add header
+      screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
+      screenContent += colorText('=============================', 'cyan') + '\n';
+      screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
+      screenContent += '\n';
+
+      screenContent += colorText('Select Models for Benchmark', 'magenta') + '\n';
+      screenContent += colorText('Use ↑↓ arrows to navigate, TAB to select/deselect, ENTER to run benchmark', 'cyan') + '\n';
+      screenContent += colorText('Type to search (real-time filtering)', 'cyan') + '\n';
+      screenContent += colorText('Press "A" to select all models, "N" to deselect all', 'cyan') + '\n';
+      screenContent += colorText('Circle states: ●=Current+Selected  ○=Current+Unselected  ●=Selected  ○=Unselected', 'dim') + '\n';
+      screenContent += colorText('Quick run: ENTER on any model | Multi-select: TAB then ENTER | Recent: R', 'dim') + '\n';
+      screenContent += '\n';
+
+      // Search interface - always visible
+      screenContent += colorText('Search: ', 'yellow') + colorText(searchQuery + '_', 'bright') + '\n';
+      screenContent += '\n';
+
+      // Ensure current page is valid
+      if (currentPage >= totalPages) currentPage = totalPages - 1;
+      if (currentPage < 0) currentPage = 0;
+
+      const startIndex = currentPage * visibleItemsCount;
+      const endIndex = Math.min(startIndex + visibleItemsCount, filteredModels.length);
+
+      // Display models in a vertical layout with pagination
+      let hasRecentModelsInCurrentPage = false;
+      let recentSectionDisplayed = false;
+      let nonRecentSectionDisplayed = false;
+
+      // Only show recent section when search is empty and we have recent models
+      const showRecentSection = searchQuery.length === 0 && recentModelObjects.length > 0;
+
+      // Check if current page contains any recent models (only when search is empty)
+      if (showRecentSection) {
+        for (let i = startIndex; i < endIndex; i++) {
+          if (filteredModels[i].isRecent) {
+            hasRecentModelsInCurrentPage = true;
+            break;
+          }
         }
       }
+
+      // Display models with proper section headers
+      for (let i = startIndex; i < endIndex; i++) {
+        const model = filteredModels[i];
+        const isCurrent = i === currentIndex;
+        // For recent models, check selection state from the original model
+        let isSelected;
+        if (model.isRecent) {
+          const originalModelIndex = allModels.findIndex(originalModel =>
+            originalModel.id === model.id &&
+            originalModel.providerName === model.providerName &&
+            !originalModel.isRecent
+          );
+          isSelected = originalModelIndex !== -1 ? allModels[originalModelIndex].selected : false;
+        } else {
+          isSelected = model.selected;
+        }
+
+        // Show recent section header if we encounter a recent model and haven't shown the header yet
+        if (model.isRecent && !recentSectionDisplayed && hasRecentModelsInCurrentPage && showRecentSection) {
+          screenContent += colorText('-------recent--------', 'dim') + '\n';
+          recentSectionDisplayed = true;
+        }
+
+        // Show separator between recent and non-recent models
+        if (!model.isRecent && recentSectionDisplayed && !nonRecentSectionDisplayed && showRecentSection) {
+          screenContent += colorText('-------recent--------', 'dim') + '\n';
+          nonRecentSectionDisplayed = true;
+        }
+
+        // Single circle that shows both current state and selection
+        let circle;
+        if (isCurrent && isSelected) {
+          circle = colorText('●', 'green'); // Current and selected - filled green
+        } else if (isCurrent && !isSelected) {
+          circle = colorText('○', 'green'); // Current but not selected - empty green
+        } else if (!isCurrent && isSelected) {
+          circle = colorText('●', 'cyan'); // Selected but not current - filled cyan
+        } else {
+          circle = colorText('○', 'dim'); // Not current and not selected - empty dim
+        }
+
+        // Model name highlighting
+        let modelName = isCurrent ? colorText(model.name, 'bright') : colorText(model.name, 'white');
+
+        // Provider name
+        let providerName = isCurrent ? colorText(`(${model.providerName})`, 'cyan') : colorText(`(${model.providerName})`, 'dim');
+
+        screenContent += `${circle} ${modelName} ${providerName}\n`;
+      }
+
+      screenContent += '\n';
+      screenContent += colorText(`Selected: ${allModels.filter(m => m.selected).length} models`, 'yellow') + '\n';
+
+      // Show pagination info
+      if (totalPages > 1) {
+        const pageInfo = colorText(`Page ${currentPage + 1}/${totalPages}`, 'cyan');
+        const navHint = colorText('Use Page Up/Down to navigate pages', 'dim');
+        screenContent += `${pageInfo} ${navHint}\n`;
+
+        if (currentPage < totalPages - 1) {
+          screenContent += colorText('↓ More models below', 'dim') + '\n';
+        }
+      }
+
+      // Clear screen and output entire buffer at once
+      clearScreen();
+      console.log(screenContent);
+      needsRedraw = false;
     }
-    
-    // Display models with proper section headers
-    for (let i = startIndex; i < endIndex; i++) {
-      const model = filteredModels[i];
-      const isCurrent = i === currentIndex;
-      // For recent models, check selection state from the original model
-      let isSelected;
-      if (model.isRecent) {
-        const originalModelIndex = allModels.findIndex(originalModel => 
-          originalModel.id === model.id && 
-          originalModel.providerName === model.providerName &&
-          !originalModel.isRecent
-        );
-        isSelected = originalModelIndex !== -1 ? allModels[originalModelIndex].selected : false;
-      } else {
-        isSelected = model.selected;
-      }
-      
-      // Show recent section header if we encounter a recent model and haven't shown the header yet
-      if (model.isRecent && !recentSectionDisplayed && hasRecentModelsInCurrentPage && showRecentSection) {
-        screenContent += colorText('-------recent--------', 'dim') + '\n';
-        recentSectionDisplayed = true;
-      }
-      
-      // Show separator between recent and non-recent models
-      if (!model.isRecent && recentSectionDisplayed && !nonRecentSectionDisplayed && showRecentSection) {
-        screenContent += colorText('-------recent--------', 'dim') + '\n';
-        nonRecentSectionDisplayed = true;
-      }
-      
-      // Single circle that shows both current state and selection
-      let circle;
-      if (isCurrent && isSelected) {
-        circle = colorText('●', 'green'); // Current and selected - filled green
-      } else if (isCurrent && !isSelected) {
-        circle = colorText('○', 'green'); // Current but not selected - empty green
-      } else if (!isCurrent && isSelected) {
-        circle = colorText('●', 'cyan'); // Selected but not current - filled cyan
-      } else {
-        circle = colorText('○', 'dim'); // Not current and not selected - empty dim
-      }
-      
-      // Model name highlighting
-      let modelName = isCurrent ? colorText(model.name, 'bright') : colorText(model.name, 'white');
-      
-      // Provider name
-      let providerName = isCurrent ? colorText(`(${model.providerName})`, 'cyan') : colorText(`(${model.providerName})`, 'dim');
-      
-      screenContent += `${circle} ${modelName} ${providerName}\n`;
-    }
-    
-    screenContent += '\n';
-    screenContent += colorText(`Selected: ${allModels.filter(m => m.selected).length} models`, 'yellow') + '\n';
-    
-    // Show pagination info
-    if (totalPages > 1) {
-      const pageInfo = colorText(`Page ${currentPage + 1}/${totalPages}`, 'cyan');
-      const navHint = colorText('Use Page Up/Down to navigate pages', 'dim');
-      screenContent += `${pageInfo} ${navHint}\n`;
-      
-      if (currentPage < totalPages - 1) {
-        screenContent += colorText('↓ More models below', 'dim') + '\n';
-      }
-    }
-    
-    // Clear screen and output entire buffer at once
-    clearScreen();
-    console.log(screenContent);
     
     const key = await getKeyPress();
     
@@ -417,56 +419,61 @@ async function selectModelsCircular() {
       // Up arrow - circular navigation within current page
       const pageStartIndex = currentPage * visibleItemsCount;
       const pageEndIndex = Math.min(pageStartIndex + visibleItemsCount, filteredModels.length);
-      
+
       if (currentIndex <= pageStartIndex) {
         currentIndex = pageEndIndex - 1;
       } else {
         currentIndex--;
       }
+      needsRedraw = true;
     } else if (key === '\u001b[B') {
       // Down arrow - circular navigation within current page
       const pageStartIndex = currentPage * visibleItemsCount;
       const pageEndIndex = Math.min(pageStartIndex + visibleItemsCount, filteredModels.length);
-      
+
       if (currentIndex >= pageEndIndex - 1) {
         currentIndex = pageStartIndex;
       } else {
         currentIndex++;
       }
+      needsRedraw = true;
     } else if (key === '\u001b[5~') {
       // Page Up
       if (currentPage > 0) {
         currentPage--;
         currentIndex = currentPage * visibleItemsCount;
+        needsRedraw = true;
       }
     } else if (key === '\u001b[6~') {
       // Page Down
       if (currentPage < totalPages - 1) {
         currentPage++;
         currentIndex = currentPage * visibleItemsCount;
+        needsRedraw = true;
       }
     } else if (key === '\t') {
       // Tab - select/deselect current model
       const currentModel = filteredModels[currentIndex];
       let actualModelIndex;
-      
+
       if (currentModel.isRecent) {
         // For recent models, find by matching the original model ID and provider name
-        actualModelIndex = allModels.findIndex(model => 
-          model.id === currentModel.id && 
+        actualModelIndex = allModels.findIndex(model =>
+          model.id === currentModel.id &&
           model.providerName === currentModel.providerName &&
           !model.isRecent // Don't match the recent copy, match the original
         );
       } else {
         // For regular models, use the standard matching
-        actualModelIndex = allModels.findIndex(model => 
+        actualModelIndex = allModels.findIndex(model =>
           model.id === currentModel.id && model.providerName === currentModel.providerName
         );
       }
-      
+
       if (actualModelIndex !== -1) {
         allModels[actualModelIndex].selected = !allModels[actualModelIndex].selected;
       }
+      needsRedraw = true;
       // Force immediate screen redraw by continuing to next iteration
       continue;
     } else if (key === '\r') {
@@ -508,6 +515,7 @@ async function selectModelsCircular() {
             allModels[actualModelIndex].selected = true;
           }
         });
+        needsRedraw = true;
       } else {
         // If search is active, add 'A' to search query
         searchQuery += key;
@@ -526,6 +534,7 @@ async function selectModelsCircular() {
             allModels[actualModelIndex].selected = false;
           }
         });
+        needsRedraw = true;
       } else {
         // If search is active, add 'N' to search query
         searchQuery += key;
@@ -540,11 +549,11 @@ async function selectModelsCircular() {
       if (searchQuery.length === 0 && recentModelObjects.length > 0) {
         // Deselect all models first
         allModels.forEach(model => model.selected = false);
-        
+
         // Select all recent models by finding the original models
         recentModelObjects.forEach(recentModel => {
-          const actualModelIndex = allModels.findIndex(model => 
-            model.id === recentModel.id && 
+          const actualModelIndex = allModels.findIndex(model =>
+            model.id === recentModel.id &&
             model.providerName === recentModel.providerName &&
             !model.isRecent // Match the original, not the recent copy
           );
@@ -552,7 +561,8 @@ async function selectModelsCircular() {
             allModels[actualModelIndex].selected = true;
           }
         });
-        
+
+        needsRedraw = true;
         // Break out of loop to run benchmark
         break;
       } else {
