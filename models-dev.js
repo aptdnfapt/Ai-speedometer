@@ -235,6 +235,15 @@ async function getAllProviders() {
   // Try to load from cache first
   const cachedData = loadCache();
   if (cachedData && cachedData.providers) {
+    // Ensure custom verified providers are included in cached data
+    const customVerifiedProviders = loadCustomVerifiedProviders();
+    const existingIds = new Set(cachedData.providers.map(p => p.id));
+    const missingCustomProviders = customVerifiedProviders.filter(p => !existingIds.has(p.id));
+
+    if (missingCustomProviders.length > 0) {
+      cachedData.providers.push(...missingCustomProviders);
+    }
+
     return cachedData.providers;
   }
 
@@ -246,17 +255,21 @@ async function getAllProviders() {
     return transformedData;
   }
 
-  // Fallback to built-in data, but add extra models
+  // Fallback to built-in data, but add extra models and custom verified providers
   const fallbackProviders = [...FALLBACK_PROVIDERS];
   const extraModels = loadExtraModels();
-  
+  const customVerifiedProviders = loadCustomVerifiedProviders();
+
   // Add extra models to fallback providers
   fallbackProviders.forEach(provider => {
     if (extraModels[provider.id]) {
       provider.models.push(...extraModels[provider.id]);
     }
   });
-  
+
+  // Add custom verified providers to fallback
+  fallbackProviders.push(...customVerifiedProviders);
+
   return fallbackProviders;
 }
 
@@ -325,5 +338,6 @@ export {
   refreshData,
   clearCache,
   fetchFromAPI,
-  transformModelsDevData
+  transformModelsDevData,
+  loadCustomVerifiedProviders
 };

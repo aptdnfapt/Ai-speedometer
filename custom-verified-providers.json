@@ -90,6 +90,22 @@
         "moonshotai/Kimi-K2-Instruct-0905": {
           "id": "moonshotai/Kimi-K2-Instruct-0905",
           "name": "Kimi K2 Instruct 0905"
+        },
+        "deepseek-ai/deepseek-v3.2-exp": {
+          "id": "deepseek-ai/deepseek-v3.2-exp",
+          "name": "DeepSeek V3.2 Exp"
+        },
+        "z-ai/glm-4.6": {
+          "id": "z-ai/glm-4.6",
+          "name": "GLM 4.6"
+        },
+        "z-ai/glm-4.6:thinking": {
+          "id": "z-ai/glm-4.6:thinking",
+          "name": "GLM 4.6 Thinking"
+        },
+        "qwen3-vl-235b-a22b-instruct": {
+          "id": "qwen3-vl-235b-a22b-instruct",
+          "name": "Qwen3 VL 235B A22B Instruct"
         }
       }
     }

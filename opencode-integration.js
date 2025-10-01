@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { homedir } from 'os';
-import { getAllProviders, getModelsForProvider } from './models-dev.js';
+import { getAllProviders, getModelsForProvider, loadCustomVerifiedProviders } from './models-dev.js';
 import { parse as parseJsonc } from 'jsonc-parser';
 
 // XDG Base Directory paths (matching opencode's implementation)
@@ -169,9 +169,9 @@ export const removeApiKey = async (providerId) => {
   return true;
 };
 
-// Get all available providers (authenticated from auth.json + custom from ai-benchmark-config.json)
+// Get all available providers (authenticated from auth.json + custom from ai-benchmark-config.json + custom verified from custom-verified-providers.json)
 export const getAllAvailableProviders = async () => {
-  const [authenticatedProviders, customProvidersFromConfig] = await Promise.all([
+  const [authenticatedProviders, customProvidersFromConfig, customVerifiedProviders] = await Promise.all([
     getAuthenticatedProviders(),
     (async () => {
       try {
@@ -181,10 +181,36 @@ export const getAllAvailableProviders = async () => {
         console.warn('Warning: Could not load custom providers:', error.message);
         return [];
       }
+    })(),
+    (async () => {
+      try {
+        return loadCustomVerifiedProviders();
+      } catch (error) {
+        console.warn('Warning: Could not load custom verified providers:', error.message);
+        return [];
+      }
     })()
   ]);
-  
-  return [...authenticatedProviders, ...customProvidersFromConfig];
+
+  // Deduplicate providers by ID, with authenticated providers taking precedence
+  const providerMap = new Map();
+
+  // Add custom verified providers first (lower priority)
+  customVerifiedProviders.forEach(provider => {
+    providerMap.set(provider.id, provider);
+  });
+
+  // Add custom providers from config (medium priority)
+  customProvidersFromConfig.forEach(provider => {
+    providerMap.set(provider.id, provider);
+  });
+
+  // Add authenticated providers last (highest priority - they have API keys)
+  authenticatedProviders.forEach(provider => {
+    providerMap.set(provider.id, provider);
+  });
+
+  return Array.from(providerMap.values());
 };
 
 // Check if a provider is authenticated
