@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { homedir } from 'os';
 
+// Import custom providers as embedded data
+import customVerifiedProvidersData from './custom-verified-providers.json' with { type: 'json' };
+
 // Cache directory and file paths
 const CACHE_DIR = path.join(homedir(), '.cache', 'ai-speedometer');
 const CACHE_FILE = path.join(CACHE_DIR, 'models.json');
@@ -113,69 +116,87 @@ async function fetchFromAPI() {
   }
 }
 
-// Load custom verified providers from embedded JSON
+// Load custom verified providers from embedded data (with filesystem fallback for development)
 function loadCustomVerifiedProviders() {
   try {
+    // Use embedded data first (will be available in built binary)
+    let customProviders = customVerifiedProvidersData;
+    
+    // In development, try to load from filesystem for live updates
     const customProvidersPath = path.join(process.cwd(), 'custom-verified-providers.json');
     if (fs.existsSync(customProvidersPath)) {
-      const customData = fs.readFileSync(customProvidersPath, 'utf8');
-      const customProviders = JSON.parse(customData);
-      
-      // Transform the custom providers to match our format
-      const providers = [];
-      
-      if (customProviders['custom-verified-providers']) {
-        for (const [, providerData] of Object.entries(customProviders['custom-verified-providers'])) {
-          // Skip the extra-models-dev section as it's handled separately
-          if (providerData.id === 'extra-models-dev') {
-            continue;
-          }
-          
-          if (providerData.id && providerData.name && providerData.models) {
-            const provider = {
-              id: providerData.id,
-              name: providerData.name,
-              baseUrl: providerData.baseUrl || '',
-              type: providerData.type || 'openai-compatible',
-              models: Object.values(providerData.models).map(model => ({
-                id: model.id,
-                name: model.name
-              }))
-            };
-            providers.push(provider);
-          }
+      try {
+        const customData = fs.readFileSync(customProvidersPath, 'utf8');
+        customProviders = JSON.parse(customData);
+      } catch (fileError) {
+        console.warn('Warning: Could not load custom providers from file, using embedded data:', fileError.message);
+        // Fall back to embedded data
+      }
+    }
+    
+    // Transform the custom providers to match our format
+    const providers = [];
+    
+    if (customProviders['custom-verified-providers']) {
+      for (const [, providerData] of Object.entries(customProviders['custom-verified-providers'])) {
+        // Skip the extra-models-dev section as it's handled separately
+        if (providerData.id === 'extra-models-dev') {
+          continue;
+        }
+        
+        if (providerData.id && providerData.name && providerData.models) {
+          const provider = {
+            id: providerData.id,
+            name: providerData.name,
+            baseUrl: providerData.baseUrl || '',
+            type: providerData.type || 'openai-compatible',
+            models: Object.values(providerData.models).map(model => ({
+              id: model.id,
+              name: model.name
+            }))
+          };
+          providers.push(provider);
         }
       }
-      
-      return providers;
     }
+    
+    return providers;
   } catch (error) {
     console.warn('Warning: Could not load custom verified providers:', error.message);
   }
   return [];
 }
 
-// Load extra models from custom-verified-providers.json
+// Load extra models from embedded data (with filesystem fallback for development)
 function loadExtraModels() {
   try {
+    // Use embedded data first (will be available in built binary)
+    let customProviders = customVerifiedProvidersData;
+    
+    // In development, try to load from filesystem for live updates
     const customProvidersPath = path.join(process.cwd(), 'custom-verified-providers.json');
     if (fs.existsSync(customProvidersPath)) {
-      const customData = fs.readFileSync(customProvidersPath, 'utf8');
-      const customProviders = JSON.parse(customData);
-      
-      const extraModels = {};
-      
-      if (customProviders['custom-verified-providers'] && customProviders['custom-verified-providers']['extra-models-dev']) {
-        for (const [providerId, models] of Object.entries(customProviders['custom-verified-providers']['extra-models-dev'])) {
-          extraModels[providerId] = Object.values(models).map(model => ({
-            id: model.id,
-            name: model.name
-          }));
-        }
+      try {
+        const customData = fs.readFileSync(customProvidersPath, 'utf8');
+        customProviders = JSON.parse(customData);
+      } catch (fileError) {
+        console.warn('Warning: Could not load extra models from file, using embedded data:', fileError.message);
+        // Fall back to embedded data
       }
-      
-      return extraModels;
     }
+    
+    const extraModels = {};
+    
+    if (customProviders['custom-verified-providers'] && customProviders['custom-verified-providers']['extra-models-dev']) {
+      for (const [providerId, models] of Object.entries(customProviders['custom-verified-providers']['extra-models-dev'])) {
+        extraModels[providerId] = Object.values(models).map(model => ({
+          id: model.id,
+          name: model.name
+        }));
+      }
+    }
+    
+    return extraModels;
   } catch (error) {
     console.warn('Warning: Could not load extra models:', error.message);
   }
