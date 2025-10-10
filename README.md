@@ -2,6 +2,8 @@
 
 A CLI tool for benchmarking AI models across multiple providers with parallel execution and performance metrics.
 
+![Ai-speedometer showcase](./pics/image.png)
+
 ## Install
 
 ```bash
