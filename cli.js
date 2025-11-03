@@ -125,7 +125,6 @@ function clearScreen() {
 function showHeader() {
   console.log(colorText('Ai-speedometer', 'cyan'));
   console.log(colorText('=============================', 'cyan'));
-  console.log(colorText('Note: opencode uses ai-sdk', 'dim'));
   console.log('');
 }
 
@@ -302,7 +301,6 @@ async function selectModelsCircular() {
       // Add header
       screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
       screenContent += colorText('=============================', 'cyan') + '\n';
-      screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
       screenContent += '\n';
 
       screenContent += colorText('Select Models for Benchmark', 'magenta') + '\n';
@@ -805,8 +803,9 @@ async function displayColorfulResults(results, method = 'AI SDK', models = []) {
   console.log(colorText('COMPREHENSIVE PERFORMANCE SUMMARY', 'yellow'));
   
   // Add note about method differences
-  console.log(colorText('Note: ', 'cyan') + colorText('Benchmark over REST API doesn\'t utilize streaming, so TTFT is 0. AI SDK utilizes streaming, but', 'dim'));
-  console.log(colorText('      ', 'cyan') + colorText('if the model is a thinking model, TTFT will be much higher because thinking tokens are not counted as first token.', 'dim'));
+  console.log(colorText('Note: ', 'cyan') + colorText('REST API with streaming now supports TTFT measurement. AI SDK also supports streaming.', 'dim'));
+  console.log(colorText('      ', 'cyan') + colorText('For thinking models, TTFT will be higher as thinking tokens are processed before output tokens.', 'dim'));
+  console.log(colorText('      ', 'cyan') + colorText('[est] markers indicate token counts were estimated (API did not provide usage metadata).', 'dim'));
   console.log('');
   
   const table = new Table({
@@ -833,15 +832,19 @@ async function displayColorfulResults(results, method = 'AI SDK', models = []) {
   
   // Add data rows (already ranked by sort order)
   sortedResults.forEach((result) => {
+    const outputTokenDisplay = result.tokenCount.toString() + (result.usedEstimateForOutput ? ' [est]' : '');
+    const promptTokenDisplay = result.promptTokens.toString() + (result.usedEstimateForInput ? ' [est]' : '');
+    const totalTokenDisplay = result.totalTokens.toString() + ((result.usedEstimateForInput || result.usedEstimateForOutput) ? ' [est]' : '');
+    
     table.push([
       colorText(result.model, 'white'),
       colorText(result.provider, 'white'),
       colorText((result.totalTime / 1000).toFixed(2), 'green'),
       colorText((result.timeToFirstToken / 1000).toFixed(2), 'yellow'),
       colorText(result.tokensPerSecond.toFixed(1), 'magenta'),
-      colorText(result.tokenCount.toString(), 'blue'),
-      colorText(result.promptTokens.toString(), 'blue'),
-      colorText(result.totalTokens.toString(), 'bright')
+      colorText(outputTokenDisplay, result.usedEstimateForOutput ? 'yellow' : 'blue'),
+      colorText(promptTokenDisplay, result.usedEstimateForInput ? 'yellow' : 'blue'),
+      colorText(totalTokenDisplay, (result.usedEstimateForInput || result.usedEstimateForOutput) ? 'yellow' : 'bright')
     ]);
   });
   
@@ -1007,7 +1010,6 @@ async function addVerifiedProvider() {
     // Add header
     screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
     screenContent += colorText('=============================', 'cyan') + '\n';
-    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
     screenContent += '\n';
     
     screenContent += colorText('Add Verified Provider', 'magenta') + '\n';
@@ -1223,7 +1225,6 @@ async function addCustomProviderCLI() {
     // Add header
     screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
     screenContent += colorText('=============================', 'cyan') + '\n';
-    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
     screenContent += '\n';
     
     screenContent += colorText('Add Custom Provider', 'magenta') + '\n';
@@ -1486,7 +1487,6 @@ async function addCustomModelsMenu() {
     // Add header
     screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
     screenContent += colorText('=============================', 'cyan') + '\n';
-    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
     screenContent += '\n';
     
     screenContent += colorText('Add Custom Models', 'magenta') + '\n';
@@ -1553,7 +1553,6 @@ async function addModelsToExistingProvider() {
     // Add header
     screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
     screenContent += colorText('=============================', 'cyan') + '\n';
-    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
     screenContent += '\n';
     
     screenContent += colorText('Add Models to Existing Provider', 'magenta') + '\n';
@@ -1674,14 +1673,14 @@ async function runRestApiBenchmark(models) {
   
   clearScreen();
   showHeader();
-  console.log(colorText('Running REST API Benchmark...', 'green'));
+  console.log(colorText('Running REST API Benchmark with Streaming...', 'green'));
   console.log(colorText(`Running ${models.length} models in parallel...`, 'cyan'));
-  console.log(colorText('Note: This uses direct REST API calls instead of AI SDK', 'dim'));
+  console.log(colorText('Note: This uses direct REST API calls with streaming support', 'dim'));
   console.log('');
   
-  // Create a function to benchmark a single model using REST API
+  // Create a function to benchmark a single model using REST API with streaming
   const benchmarkModelRest = async (model) => {
-    console.log(colorText(`Testing ${model.name} (${model.providerName}) via REST API...`, 'yellow'));
+    console.log(colorText(`Testing ${model.name} (${model.providerName}) via REST API with streaming...`, 'yellow'));
     
     try {
       // Validate required configuration
@@ -1693,14 +1692,24 @@ async function runRestApiBenchmark(models) {
         throw new Error(`Missing base URL for provider ${model.providerName}`);
       }
       
+      // Extract the actual model ID for API calls (moved before usage)
+      let actualModelId = model.name;
+      if (model.id && model.id.includes('_')) {
+        actualModelId = model.id.split('_')[1];
+      }
+      actualModelId = actualModelId.trim();
+      
       const startTime = Date.now();
+      let firstTokenTime = null;
+      let streamedText = '';
+      let tokenCount = 0;
       
       // Use correct endpoint based on provider type
       let endpoint;
       if (model.providerType === 'anthropic') {
         endpoint = '/messages';
       } else if (model.providerType === 'google') {
-        endpoint = '/models/' + actualModelId + ':generateContent';
+        endpoint = '/models/' + actualModelId + ':streamGenerateContent';
       } else {
         endpoint = '/chat/completions';
       }
@@ -1709,17 +1718,7 @@ async function runRestApiBenchmark(models) {
       const baseUrl = model.providerConfig.baseUrl.replace(/\/$/, '');
       const url = `${baseUrl}${endpoint}`;
       
-      // Extract the actual model ID for API calls
-      let actualModelId = model.name;
-      if (model.id && model.id.includes('_')) {
-        // For models with provider prefix, extract the actual model ID
-        actualModelId = model.id.split('_')[1];
-        console.log(colorText(`  Using extracted model ID: ${actualModelId}`, 'cyan'));
-      }
-      
-      // Trim any trailing spaces from model names
-      actualModelId = actualModelId.trim();
-      console.log(colorText(`  Using final model ID: "${actualModelId}"`, 'cyan'));
+      console.log(colorText(`  Using model ID: "${actualModelId}"`, 'cyan'));
       
       const headers = {
         'Content-Type': 'application/json',
@@ -1731,7 +1730,6 @@ async function runRestApiBenchmark(models) {
         headers['x-api-key'] = model.providerConfig.apiKey;
         headers['anthropic-version'] = '2023-06-01';
       } else if (model.providerType === 'google') {
-        // Google uses different auth
         delete headers['Authorization'];
         headers['x-goog-api-key'] = model.providerConfig.apiKey;
       }
@@ -1742,14 +1740,15 @@ async function runRestApiBenchmark(models) {
           { role: 'user', content: testPrompt }
         ],
         max_tokens: 500,
-        temperature: 0.7
+        temperature: 0.7,
+        stream: true
       };
 
       // Adjust for provider-specific formats
       if (model.providerType === 'anthropic') {
         body.max_tokens = 500;
+        body.stream = true;
       } else if (model.providerType === 'google') {
-        // Google format is slightly different
         body.contents = [{ parts: [{ text: testPrompt }] }];
         body.generationConfig = {
           maxOutputTokens: 500,
@@ -1757,10 +1756,10 @@ async function runRestApiBenchmark(models) {
         };
         delete body.messages;
         delete body.max_tokens;
+        delete body.stream;
       }
 
-      console.log(colorText(`  Making request to: ${url}`, 'cyan'));
-      console.log(colorText(`  Using model: ${actualModelId}`, 'cyan'));
+      console.log(colorText(`  Making streaming request to: ${url}`, 'cyan'));
       
       const response = await fetch(url, {
         method: 'POST',
@@ -1776,43 +1775,147 @@ async function runRestApiBenchmark(models) {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      // Process streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let inputTokens = 0;
+      let outputTokens = 0;
+      let isFirstChunk = true;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Capture TTFT on first chunk arrival (network level)
+        if (isFirstChunk && !firstTokenTime) {
+          firstTokenTime = Date.now();
+          console.log(colorText(`  First chunk received (TTFT)!`, 'green'));
+          isFirstChunk = false;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
+
+          try {
+            if (model.providerType === 'anthropic') {
+              // Anthropic uses newline-delimited JSON with event types
+              if (trimmedLine.startsWith('data: ')) {
+                const jsonStr = trimmedLine.slice(6);
+                if (jsonStr === '[DONE]') break;
+                
+                const chunk = JSON.parse(jsonStr);
+                
+                if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
+                  streamedText += chunk.delta.text;
+                } else if (chunk.type === 'message_start' && chunk.message?.usage) {
+                  inputTokens = chunk.message.usage.input_tokens || 0;
+                } else if (chunk.type === 'message_delta') {
+                  // Capture output tokens from message_delta
+                  if (chunk.usage?.output_tokens) {
+                    outputTokens = chunk.usage.output_tokens;
+                  }
+                  // Some implementations put input_tokens here too
+                  if (chunk.usage?.input_tokens && !inputTokens) {
+                    inputTokens = chunk.usage.input_tokens;
+                  }
+                }
+              } else if (trimmedLine.startsWith('event: ')) {
+                // Skip event lines (Anthropic SSE format uses separate event and data lines)
+                continue;
+              } else {
+                // Try parsing as raw JSON (some Anthropic-compatible APIs don't use SSE format)
+                const chunk = JSON.parse(trimmedLine);
+                
+                if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
+                  streamedText += chunk.delta.text;
+                } else if (chunk.type === 'message_start' && chunk.message?.usage) {
+                  inputTokens = chunk.message.usage.input_tokens || 0;
+                } else if (chunk.type === 'message_delta') {
+                  if (chunk.usage?.output_tokens) {
+                    outputTokens = chunk.usage.output_tokens;
+                  }
+                  if (chunk.usage?.input_tokens && !inputTokens) {
+                    inputTokens = chunk.usage.input_tokens;
+                  }
+                }
+              }
+            } else if (model.providerType === 'google') {
+              // Google streaming format
+              const chunk = JSON.parse(trimmedLine);
+              if (chunk.candidates?.[0]?.content?.parts?.[0]?.text) {
+                const text = chunk.candidates[0].content.parts[0].text;
+                streamedText += text;
+              }
+              if (chunk.usageMetadata?.promptTokenCount) {
+                inputTokens = chunk.usageMetadata.promptTokenCount;
+              }
+              if (chunk.usageMetadata?.candidatesTokenCount) {
+                outputTokens = chunk.usageMetadata.candidatesTokenCount;
+              }
+            } else {
+              // OpenAI-compatible SSE format
+              if (trimmedLine.startsWith('data: ')) {
+                const jsonStr = trimmedLine.slice(6);
+                if (jsonStr === '[DONE]') break;
+                
+                const chunk = JSON.parse(jsonStr);
+                
+                if (chunk.choices?.[0]?.delta?.content) {
+                  streamedText += chunk.choices[0].delta.content;
+                }
+                
+                if (chunk.usage?.prompt_tokens) {
+                  inputTokens = chunk.usage.prompt_tokens;
+                }
+                if (chunk.usage?.completion_tokens) {
+                  outputTokens = chunk.usage.completion_tokens;
+                }
+              }
+            }
+          } catch (parseError) {
+            // Skip invalid JSON lines
+            continue;
+          }
+        }
+      }
+
       const endTime = Date.now();
       const totalTime = endTime - startTime;
+      const timeToFirstToken = firstTokenTime ? firstTokenTime - startTime : totalTime;
 
-      // Calculate tokens based on provider type
-      let inputTokens, outputTokens;
-      
-      if (model.providerType === 'anthropic') {
-        inputTokens = data.usage?.input_tokens || Math.round(testPrompt.length / 4);
-        outputTokens = data.usage?.output_tokens || Math.round(data.content?.[0]?.text?.length / 4 || 0);
-      } else if (model.providerType === 'google') {
-        inputTokens = data.usageMetadata?.promptTokenCount || Math.round(testPrompt.length / 4);
-        outputTokens = data.usageMetadata?.candidatesTokenCount || Math.round(data.candidates?.[0]?.content?.parts?.[0]?.text?.length / 4 || 0);
-      } else {
-        inputTokens = data.usage?.prompt_tokens || Math.round(testPrompt.length / 4);
-        outputTokens = data.usage?.completion_tokens || Math.round(data.choices?.[0]?.message?.content?.length / 4 || 0);
-      }
-      
-      const totalTokens = inputTokens + outputTokens;
+      // Calculate token counts - use provider's count if available, otherwise estimate
+      const usedEstimateForOutput = !outputTokens;
+      const usedEstimateForInput = !inputTokens;
+      const finalOutputTokens = outputTokens || Math.round(streamedText.length / 4);
+      const finalInputTokens = inputTokens || Math.round(testPrompt.length / 4);
+      const totalTokens = finalInputTokens + finalOutputTokens;
       const tokensPerSecond = totalTime > 0 ? (totalTokens / totalTime) * 1000 : 0;
 
       console.log(colorText('Completed!', 'green'));
       console.log(colorText(`  Total Time: ${(totalTime / 1000).toFixed(2)}s`, 'cyan'));
+      console.log(colorText(`  TTFT: ${(timeToFirstToken / 1000).toFixed(2)}s`, 'cyan'));
       console.log(colorText(`  Tokens/Sec: ${tokensPerSecond.toFixed(1)}`, 'cyan'));
-      console.log(colorText(`  Input Tokens: ${inputTokens}`, 'cyan'));
-      console.log(colorText(`  Output Tokens: ${outputTokens}`, 'cyan'));
-      console.log(colorText(`  Total Tokens: ${totalTokens}`, 'cyan'));
+      console.log(colorText(`  Input Tokens: ${finalInputTokens}${usedEstimateForInput ? ' [estimated]' : ''}`, usedEstimateForInput ? 'yellow' : 'cyan'));
+      console.log(colorText(`  Output Tokens: ${finalOutputTokens}${usedEstimateForOutput ? ' [estimated]' : ''}`, usedEstimateForOutput ? 'yellow' : 'cyan'));
+      console.log(colorText(`  Total Tokens: ${totalTokens}${(usedEstimateForInput || usedEstimateForOutput) ? ' [partially estimated]' : ''}`, (usedEstimateForInput || usedEstimateForOutput) ? 'yellow' : 'cyan'));
       
       return {
         model: model.name,
         provider: model.providerName,
         totalTime: totalTime,
-        timeToFirstToken: 0, // REST API doesn't track TTFT
-        tokenCount: outputTokens,
+        timeToFirstToken: timeToFirstToken,
+        tokenCount: finalOutputTokens,
         tokensPerSecond: tokensPerSecond,
-        promptTokens: inputTokens,
+        promptTokens: finalInputTokens,
         totalTokens: totalTokens,
+        usedEstimateForOutput: usedEstimateForOutput,
+        usedEstimateForInput: usedEstimateForInput,
         success: true
       };
       
@@ -1841,7 +1944,7 @@ async function runRestApiBenchmark(models) {
   console.log('');
   console.log(colorText('All REST API benchmarks completed!', 'green'));
   
-  await displayColorfulResults(results, 'REST API', models);
+  await displayColorfulResults(results, 'REST API (Streaming)', models);
   
   // Add successful models to recent models list
   const successfulModels = results
@@ -1868,16 +1971,16 @@ async function runRestApiBenchmark(models) {
 async function showMainMenu() {
   const menuOptions = [
     { id: 1, text: 'Set Model', action: () => showModelMenu() },
-    { id: 2, text: 'Run Benchmark (AI SDK)', action: async () => {
-      const selectedModels = await selectModelsCircular();
-      if (selectedModels.length > 0) {
-        await runStreamingBenchmark(selectedModels);
-      }
-    }},
-    { id: 3, text: 'Run Benchmark (REST API)', action: async () => {
+    { id: 2, text: 'Run Benchmark (REST API)', action: async () => {
       const selectedModels = await selectModelsCircular();
       if (selectedModels.length > 0) {
         await runRestApiBenchmark(selectedModels);
+      }
+    }},
+    { id: 3, text: 'Run Benchmark (AI SDK - Legacy)', action: async () => {
+      const selectedModels = await selectModelsCircular();
+      if (selectedModels.length > 0) {
+        await runStreamingBenchmark(selectedModels);
       }
     }},
     { id: 4, text: 'Exit', action: () => {
@@ -1896,7 +1999,6 @@ async function showMainMenu() {
     // Add header
     screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
     screenContent += colorText('=============================', 'cyan') + '\n';
-    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
     screenContent += '\n';
     
     screenContent += colorText('Main Menu:', 'cyan') + '\n';
@@ -1953,7 +2055,6 @@ async function showModelMenu() {
     // Add header
     screenContent += colorText('Ai-speedometer', 'cyan') + '\n';
     screenContent += colorText('=============================', 'cyan') + '\n';
-    screenContent += colorText('Note: opencode uses ai-sdk', 'dim') + '\n';
     screenContent += '\n';
     
     screenContent += colorText('Model Management:', 'cyan') + '\n';
