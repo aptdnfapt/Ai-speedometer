@@ -50,10 +50,6 @@
           "id": "meituan-longcat/LongCat-Flash-Thinking-FP8",
           "name": "LongCat Flash Thinking FP8"
         },
-        "zai-org/GLM-4.6-turbo": {
-          "id": "zai-org/GLM-4.6-turbo",
-          "name": "GLM-4.6 Turbo"
-        }
       }
     },
     "nanogpt-plan": {
