@@ -1978,22 +1978,25 @@ async function runRestApiBenchmark(models) {
   // Run all benchmarks in parallel with UI feedback
   console.log(colorText('Starting parallel REST API benchmark execution...', 'cyan'));
   
-  const results = [];
-  for (const model of models) {
+  // Start all benchmarks in parallel
+  const promises = models.map(model => {
     console.log(colorText(`Testing ${model.name} (${model.providerName}) via REST API with streaming...`, 'yellow'));
-    const result = await benchmarkSingleModelRest(model);
-    
+    return benchmarkSingleModelRest(model);
+  });
+  
+  const results = await Promise.all(promises);
+  
+  // Show individual results after all complete
+  results.forEach((result, index) => {
     if (result.success) {
-      console.log(colorText('Completed!', 'green'));
+      console.log(colorText(`✓ ${result.model} (${result.provider}) completed!`, 'green'));
       console.log(colorText(`  Total Time: ${(result.totalTime / 1000).toFixed(2)}s`, 'cyan'));
       console.log(colorText(`  TTFT: ${(result.timeToFirstToken / 1000).toFixed(2)}s`, 'cyan'));
       console.log(colorText(`  Tokens/Sec: ${result.tokensPerSecond.toFixed(1)}`, 'cyan'));
     } else {
-      console.log(colorText('Failed: ', 'red') + result.error);
+      console.log(colorText(`✗ ${result.model} (${result.provider}) failed: `, 'red') + result.error);
     }
-    
-    results.push(result);
-  }
+  });
   
   console.log('');
   console.log(colorText('All REST API benchmarks completed!', 'green'));
