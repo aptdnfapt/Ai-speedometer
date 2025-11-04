@@ -6,7 +6,6 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { streamText } from 'ai';  // Changed from streamText to generateText
 import { testPrompt } from './test-prompt.js';
-import { LLMBenchmark } from './benchmark-rest.js';
 import { getAllProviders, searchProviders, getModelsForProvider } from './models-dev.js';
 import { 
   getAllAvailableProviders, 
@@ -29,8 +28,59 @@ import {
 import 'dotenv/config';
 import Table from 'cli-table3';
 
-// Check for debug flag
-const debugMode = process.argv.includes('--debug');
+// Parse command line arguments
+function parseCliArgs() {
+  const args = process.argv.slice(2);
+  const parsed = {
+    debug: false,
+    bench: null,
+    apiKey: null,
+    useAiSdk: false,
+    help: false
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    
+    if (arg === '--debug') {
+      parsed.debug = true;
+    } else if (arg === '--bench') {
+      parsed.bench = args[++i];
+    } else if (arg === '--api-key') {
+      parsed.apiKey = args[++i];
+    } else if (arg === '--ai-sdk') {
+      parsed.useAiSdk = true;
+    } else if (arg === '--help' || arg === '-h') {
+      parsed.help = true;
+    }
+  }
+
+  return parsed;
+}
+
+function showHelp() {
+  console.log(colorText('ai-speedometer - Benchmark AI models', 'cyan'));
+  console.log('');
+  console.log(colorText('Usage:', 'yellow'));
+  console.log('  ai-speedometer                                  ' + colorText('# Interactive mode', 'dim'));
+  console.log('  ai-speedometer --bench <provider:model>         ' + colorText('# Headless benchmark', 'dim'));
+  console.log('');
+  console.log(colorText('Options:', 'yellow'));
+  console.log('  --bench <provider:model>    ' + colorText('Run benchmark in headless mode', 'dim'));
+  console.log('  --api-key <key>             ' + colorText('Override API key (optional)', 'dim'));
+  console.log('  --ai-sdk                    ' + colorText('Use AI SDK instead of REST API', 'dim'));
+  console.log('  --debug                     ' + colorText('Enable debug logging', 'dim'));
+  console.log('  --help, -h                  ' + colorText('Show this help message', 'dim'));
+  console.log('');
+  console.log(colorText('Examples:', 'yellow'));
+  console.log('  ai-speedometer --bench openai:gpt-4');
+  console.log('  ai-speedometer --bench anthropic:claude-3-opus --api-key "sk-..."');
+  console.log('  ai-speedometer --bench openai:gpt-4 --ai-sdk');
+  console.log('');
+}
+
+const cliArgs = parseCliArgs();
+const debugMode = cliArgs.debug;
 let logFile = null;
 
 function log(message) {
@@ -1664,23 +1714,9 @@ async function addModelsToExistingProvider() {
   await question(colorText('\nPress Enter to continue...', 'yellow'));
 }
 
-// REST API benchmark function using direct API calls
-async function runRestApiBenchmark(models) {
-  if (models.length === 0) {
-    console.log(colorText('No models selected for benchmarking.', 'red'));
-    return;
-  }
-  
-  clearScreen();
-  showHeader();
-  console.log(colorText('Running REST API Benchmark with Streaming...', 'green'));
-  console.log(colorText(`Running ${models.length} models in parallel...`, 'cyan'));
-  console.log(colorText('Note: This uses direct REST API calls with streaming support', 'dim'));
-  console.log('');
-  
-  // Create a function to benchmark a single model using REST API with streaming
-  const benchmarkModelRest = async (model) => {
-    console.log(colorText(`Testing ${model.name} (${model.providerName}) via REST API with streaming...`, 'yellow'));
+// Silent benchmark helper (returns raw result without UI)
+async function benchmarkSingleModelRest(model) {
+
     
     try {
       // Validate required configuration
@@ -1718,7 +1754,7 @@ async function runRestApiBenchmark(models) {
       const baseUrl = model.providerConfig.baseUrl.replace(/\/$/, '');
       const url = `${baseUrl}${endpoint}`;
       
-      console.log(colorText(`  Using model ID: "${actualModelId}"`, 'cyan'));
+
       
       const headers = {
         'Content-Type': 'application/json',
@@ -1759,7 +1795,7 @@ async function runRestApiBenchmark(models) {
         delete body.stream;
       }
 
-      console.log(colorText(`  Making streaming request to: ${url}`, 'cyan'));
+
       
       const response = await fetch(url, {
         method: 'POST',
@@ -1767,11 +1803,10 @@ async function runRestApiBenchmark(models) {
         body: JSON.stringify(body)
       });
 
-      console.log(colorText(`  Response status: ${response.status}`, 'cyan'));
+
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.log(colorText(`  Error: ${errorText.slice(0, 200)}...`, 'red'));
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
@@ -1790,7 +1825,6 @@ async function runRestApiBenchmark(models) {
         // Capture TTFT on first chunk arrival (network level)
         if (isFirstChunk && !firstTokenTime) {
           firstTokenTime = Date.now();
-          console.log(colorText(`  First chunk received (TTFT)!`, 'green'));
           isFirstChunk = false;
         }
 
@@ -1896,14 +1930,6 @@ async function runRestApiBenchmark(models) {
       const finalInputTokens = inputTokens || Math.round(testPrompt.length / 4);
       const totalTokens = finalInputTokens + finalOutputTokens;
       const tokensPerSecond = totalTime > 0 ? (totalTokens / totalTime) * 1000 : 0;
-
-      console.log(colorText('Completed!', 'green'));
-      console.log(colorText(`  Total Time: ${(totalTime / 1000).toFixed(2)}s`, 'cyan'));
-      console.log(colorText(`  TTFT: ${(timeToFirstToken / 1000).toFixed(2)}s`, 'cyan'));
-      console.log(colorText(`  Tokens/Sec: ${tokensPerSecond.toFixed(1)}`, 'cyan'));
-      console.log(colorText(`  Input Tokens: ${finalInputTokens}${usedEstimateForInput ? ' [estimated]' : ''}`, usedEstimateForInput ? 'yellow' : 'cyan'));
-      console.log(colorText(`  Output Tokens: ${finalOutputTokens}${usedEstimateForOutput ? ' [estimated]' : ''}`, usedEstimateForOutput ? 'yellow' : 'cyan'));
-      console.log(colorText(`  Total Tokens: ${totalTokens}${(usedEstimateForInput || usedEstimateForOutput) ? ' [partially estimated]' : ''}`, (usedEstimateForInput || usedEstimateForOutput) ? 'yellow' : 'cyan'));
       
       return {
         model: model.name,
@@ -1920,7 +1946,6 @@ async function runRestApiBenchmark(models) {
       };
       
     } catch (error) {
-      console.log(colorText('Failed: ', 'red') + error.message);
       return {
         model: model.name,
         provider: model.providerName,
@@ -1934,12 +1959,41 @@ async function runRestApiBenchmark(models) {
         error: error.message
       };
     }
-  };
+}
+
+// REST API benchmark function using direct API calls (with UI)
+async function runRestApiBenchmark(models) {
+  if (models.length === 0) {
+    console.log(colorText('No models selected for benchmarking.', 'red'));
+    return;
+  }
   
-  // Run all benchmarks in parallel
+  clearScreen();
+  showHeader();
+  console.log(colorText('Running REST API Benchmark with Streaming...', 'green'));
+  console.log(colorText(`Running ${models.length} models in parallel...`, 'cyan'));
+  console.log(colorText('Note: This uses direct REST API calls with streaming support', 'dim'));
+  console.log('');
+  
+  // Run all benchmarks in parallel with UI feedback
   console.log(colorText('Starting parallel REST API benchmark execution...', 'cyan'));
-  const promises = models.map(model => benchmarkModelRest(model));
-  const results = await Promise.all(promises);
+  
+  const results = [];
+  for (const model of models) {
+    console.log(colorText(`Testing ${model.name} (${model.providerName}) via REST API with streaming...`, 'yellow'));
+    const result = await benchmarkSingleModelRest(model);
+    
+    if (result.success) {
+      console.log(colorText('Completed!', 'green'));
+      console.log(colorText(`  Total Time: ${(result.totalTime / 1000).toFixed(2)}s`, 'cyan'));
+      console.log(colorText(`  TTFT: ${(result.timeToFirstToken / 1000).toFixed(2)}s`, 'cyan'));
+      console.log(colorText(`  Tokens/Sec: ${result.tokensPerSecond.toFixed(1)}`, 'cyan'));
+    } else {
+      console.log(colorText('Failed: ', 'red') + result.error);
+    }
+    
+    results.push(result);
+  }
   
   console.log('');
   console.log(colorText('All REST API benchmarks completed!', 'green'));
@@ -2103,17 +2157,157 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
+// Headless benchmark mode
+async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
+  try {
+    // Parse provider:model format
+    const [providerSpec, modelName] = benchSpec.split(':');
+    
+    if (!providerSpec || !modelName) {
+      console.error(colorText('Error: Invalid --bench format. Use: provider:model', 'red'));
+      console.error(colorText('Example: --bench zai-code-anth:glm-4.6', 'yellow'));
+      process.exit(1);
+    }
+
+    // Load all available providers
+    const config = await loadConfig();
+    
+    // Find the provider (case-insensitive search)
+    const provider = config.providers.find(p => 
+      p.id?.toLowerCase() === providerSpec.toLowerCase() || 
+      p.name?.toLowerCase() === providerSpec.toLowerCase()
+    );
+    
+    if (!provider) {
+      console.error(colorText(`Error: Provider '${providerSpec}' not found`, 'red'));
+      console.error(colorText('Available providers:', 'yellow'));
+      config.providers.forEach(p => {
+        console.error(colorText(`  - ${p.id || p.name}`, 'cyan'));
+      });
+      process.exit(1);
+    }
+
+    // Find the model
+    // Model IDs are prefixed with provider name (e.g., "zai-code-anth_glm-4.6")
+    // So we need to check:
+    // 1. Full ID match: "zai-code-anth_glm-4.6"
+    // 2. ID without provider prefix: "glm-4.6"
+    // 3. Name match: "GLM-4.6-anth"
+    const model = provider.models.find(m => {
+      const modelIdLower = m.id?.toLowerCase() || '';
+      const modelNameLower = m.name?.toLowerCase() || '';
+      const searchLower = modelName.toLowerCase();
+      
+      // Check full ID match
+      if (modelIdLower === searchLower) return true;
+      
+      // Check ID without provider prefix (strip "provider_" prefix)
+      const idWithoutPrefix = modelIdLower.includes('_') 
+        ? modelIdLower.split('_').slice(1).join('_') 
+        : modelIdLower;
+      if (idWithoutPrefix === searchLower) return true;
+      
+      // Check name match
+      if (modelNameLower === searchLower) return true;
+      
+      return false;
+    });
+    
+    if (!model) {
+      console.error(colorText(`Error: Model '${modelName}' not found in provider '${provider.name}'`, 'red'));
+      console.error(colorText('Available models:', 'yellow'));
+      provider.models.forEach(m => {
+        // Show both name and ID (without provider prefix) for clarity
+        const idWithoutPrefix = m.id?.includes('_') 
+          ? m.id.split('_').slice(1).join('_') 
+          : m.id;
+        console.error(colorText(`  - ${m.name} (id: ${idWithoutPrefix})`, 'cyan'));
+      });
+      process.exit(1);
+    }
+
+    // If API key provided via flag, use it; otherwise use existing config
+    let finalApiKey = apiKey || provider.apiKey;
+    
+    if (!finalApiKey) {
+      console.error(colorText(`Error: No API key found for provider '${provider.name}'`, 'red'));
+      console.error(colorText('Please provide --api-key flag or configure the provider first', 'yellow'));
+      process.exit(1);
+    }
+
+    // Create model object with all required config
+    const modelConfig = {
+      ...model,
+      providerName: provider.name,
+      providerType: provider.type,
+      providerId: provider.id,
+      providerConfig: {
+        ...provider,
+        apiKey: finalApiKey,
+        baseUrl: provider.baseUrl || ''
+      },
+      selected: true
+    };
+
+    // Run benchmark silently and get results
+    let result;
+    if (useAiSdk) {
+      // TODO: Implement AI SDK silent benchmark
+      console.error(colorText('AI SDK headless mode not yet implemented', 'red'));
+      process.exit(1);
+    } else {
+      result = await benchmarkSingleModelRest(modelConfig);
+    }
+
+    // Output JSON to stdout
+    const jsonOutput = {
+      provider: provider.name,
+      providerId: provider.id,
+      model: model.name,
+      modelId: model.id,
+      method: useAiSdk ? 'ai-sdk' : 'rest-api',
+      success: result.success,
+      totalTime: result.totalTime,
+      totalTimeSeconds: result.totalTime / 1000,
+      timeToFirstToken: result.timeToFirstToken,
+      timeToFirstTokenSeconds: result.timeToFirstToken / 1000,
+      tokensPerSecond: result.tokensPerSecond,
+      outputTokens: result.tokenCount,
+      promptTokens: result.promptTokens,
+      totalTokens: result.totalTokens,
+      error: result.error || null
+    };
+
+    console.log(JSON.stringify(jsonOutput, null, 2));
+    process.exit(result.success ? 0 : 1);
+  } catch (error) {
+    console.error(colorText('Error: ' + error.message, 'red'));
+    if (debugMode) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
+}
+
 // Start the CLI
-if (import.meta.url === `file://${process.argv[1]}` || 
-    process.argv.length === 2 || 
-    (process.argv.length === 3 && process.argv[2] === '--debug')) {
+if (import.meta.url === `file://${process.argv[1]}`) {
+  // Check if help flag
+  if (cliArgs.help) {
+    showHelp();
+    process.exit(0);
+  }
   
-  // Clean up recent models from main config and migrate to cache on startup
-  cleanupRecentModelsFromConfig().then(() => {
-    showMainMenu();
-  }).catch(() => {
-    showMainMenu();
-  });
+  // Check if headless benchmark mode
+  if (cliArgs.bench) {
+    runHeadlessBenchmark(cliArgs.bench, cliArgs.apiKey, cliArgs.useAiSdk);
+  } else {
+    // Interactive mode
+    cleanupRecentModelsFromConfig().then(() => {
+      showMainMenu();
+    }).catch(() => {
+      showMainMenu();
+    });
+  }
 }
 
 export { showMainMenu, listProviders, selectModelsCircular, runStreamingBenchmark, loadConfig, saveConfig };
