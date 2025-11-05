@@ -1,6 +1,6 @@
 {
   "name": "ai-speedometer",
-  "version": "1.2.5",
+  "version": "1.3.0",
   "description": "A comprehensive CLI tool for benchmarking AI models across multiple providers with parallel execution and professional metrics",
   "main": "cli.js",
   "bin": {
@@ -8,7 +8,7 @@
     "aispeed": "dist/ai-speedometer"
   },
   "preferGlobal": true,
-  "type": "module",
+
   "engines": {
     "node": ">=18.0.0"
   },
@@ -16,8 +16,8 @@
     "start": "node cli.js",
     "cli": "node cli.js",
     "cli:debug": "node cli.js --debug",
-    "build": "esbuild cli.js --bundle --platform=node --outfile=dist/ai-speedometer --format=esm --minify --external:jsonc-parser --external:dotenv && sed -i '1s|^.*|#!/usr/bin/env node|' dist/ai-speedometer",
-    "build:dev": "esbuild cli.js --bundle --platform=node --outfile=dist/ai-speedometer --format=esm --external:jsonc-parser --external:dotenv && sed -i '1s|^.*|#!/usr/bin/env node|' dist/ai-speedometer",
+    "build": "esbuild cli.js --bundle --platform=node --outfile=dist/ai-speedometer --format=cjs --minify --external:jsonc-parser --external:dotenv && sed -i '1s|^.*|#!/usr/bin/env node|' dist/ai-speedometer",
+    "build:dev": "esbuild cli.js --bundle --platform=node --outfile=dist/ai-speedometer --format=cjs --external:jsonc-parser --external:dotenv && sed -i '1s|^.*|#!/usr/bin/env node|' dist/ai-speedometer",
     "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

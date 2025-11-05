@@ -1826,6 +1826,9 @@ async function benchmarkSingleModelRest(model) {
         if (isFirstChunk && !firstTokenTime) {
           firstTokenTime = Date.now();
           isFirstChunk = false;
+          // Show live TTFT result
+          const ttftSeconds = ((firstTokenTime - startTime) / 1000).toFixed(2);
+          console.log(colorText(`TTFT received at ${ttftSeconds}s for ${model.name}`, 'green'));
         }
 
         buffer += decoder.decode(value, { stream: true });
@@ -2293,7 +2296,7 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
 }
 
 // Start the CLI
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   // Check if help flag
   if (cliArgs.help) {
     showHelp();
