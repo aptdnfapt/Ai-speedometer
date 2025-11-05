@@ -17,6 +17,12 @@ npm install -g ai-speedometer
 - **Tokens/Second** - Real-time throughput
 - **Token Counts** - Input, output, and total tokens used
 
+## New Features
+
+- **REST API Default** - REST API benchmarking is now the default method for better compatibility
+- **Headless Mode** - Run benchmarks without interactive CLI using command-line arguments
+- **Streaming Support** - Full streaming support now available in REST API benchmarks
+
 ## Quick Setup
 
 1. **Set Model**
@@ -41,7 +47,8 @@ npm install -g ai-speedometer
 4. **Run Benchmark**
    ```bash
    ai-speedometer
-   # Select "Run Benchmark (AI SDK)" → Choose models → Press ENTER
+   # Select "Run Benchmark (REST API)" → Choose models → Press ENTER
+   # Note: REST API is now the default benchmark method
    ```
 
 ## Usage
@@ -55,6 +62,13 @@ aispeed
 
 # Debug mode
 ai-speedometer --debug
+
+# Headless mode - run benchmark directly
+ai-speedometer --bench openai:gpt-4
+# With custom API key
+ai-speedometer --bench openai:gpt-4 --api-key "sk-your-key"
+# Use AI SDK instead of REST API
+ai-speedometer --bench openai:gpt-4 --ai-sdk
 ```
 
 ## Configuration Files
