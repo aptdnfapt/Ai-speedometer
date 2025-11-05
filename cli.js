@@ -36,6 +36,7 @@ function parseCliArgs() {
     bench: null,
     apiKey: null,
     useAiSdk: false,
+    formatted: false,
     help: false
   };
 
@@ -50,6 +51,8 @@ function parseCliArgs() {
       parsed.apiKey = args[++i];
     } else if (arg === '--ai-sdk') {
       parsed.useAiSdk = true;
+    } else if (arg === '--formatted') {
+      parsed.formatted = true;
     } else if (arg === '--help' || arg === '-h') {
       parsed.help = true;
     }
@@ -69,6 +72,7 @@ function showHelp() {
   console.log('  --bench <provider:model>    ' + colorText('Run benchmark in headless mode', 'dim'));
   console.log('  --api-key <key>             ' + colorText('Override API key (optional)', 'dim'));
   console.log('  --ai-sdk                    ' + colorText('Use AI SDK instead of REST API', 'dim'));
+  console.log('  --formatted                 ' + colorText('Format JSON output for human readability', 'dim'));
   console.log('  --debug                     ' + colorText('Enable debug logging', 'dim'));
   console.log('  --help, -h                  ' + colorText('Show this help message', 'dim'));
   console.log('');
@@ -76,6 +80,7 @@ function showHelp() {
   console.log('  ai-speedometer --bench openai:gpt-4');
   console.log('  ai-speedometer --bench anthropic:claude-3-opus --api-key "sk-..."');
   console.log('  ai-speedometer --bench openai:gpt-4 --ai-sdk');
+  console.log('  ai-speedometer --bench openai:gpt-4 --formatted');
   console.log('');
 }
 
@@ -1826,9 +1831,11 @@ async function benchmarkSingleModelRest(model) {
         if (isFirstChunk && !firstTokenTime) {
           firstTokenTime = Date.now();
           isFirstChunk = false;
-          // Show live TTFT result
+          // Show live TTFT result (only in interactive mode, not headless)
           const ttftSeconds = ((firstTokenTime - startTime) / 1000).toFixed(2);
-          console.log(colorText(`TTFT received at ${ttftSeconds}s for ${model.name}`, 'green'));
+          if (!cliArgs.bench) {
+            console.log(colorText(`TTFT received at ${ttftSeconds}s for ${model.name}`, 'green'));
+          }
         }
 
         buffer += decoder.decode(value, { stream: true });
@@ -2281,10 +2288,11 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
       outputTokens: result.tokenCount,
       promptTokens: result.promptTokens,
       totalTokens: result.totalTokens,
+      is_estimated: !!(result.usedEstimateForOutput || result.usedEstimateForInput),
       error: result.error || null
     };
 
-    console.log(JSON.stringify(jsonOutput, null, 2));
+    console.log(JSON.stringify(jsonOutput, null, cliArgs.formatted ? 2 : 0));
     process.exit(result.success ? 0 : 1);
   } catch (error) {
     console.error(colorText('Error: ' + error.message, 'red'));
