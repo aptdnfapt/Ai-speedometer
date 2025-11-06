@@ -2305,7 +2305,7 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
 }
 
 // Start the CLI
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   // Check if help flag
   if (cliArgs.help) {
     showHelp();
