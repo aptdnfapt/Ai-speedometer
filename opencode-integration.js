@@ -170,7 +170,7 @@ export const removeApiKey = async (providerId) => {
 };
 
 // Get all available providers (authenticated from auth.json + custom from ai-benchmark-config.json + custom verified from custom-verified-providers.json)
-export const getAllAvailableProviders = async () => {
+export const getAllAvailableProviders = async (includeAllProviders = false) => {
   const [authenticatedProviders, customProvidersFromConfig, customVerifiedProviders] = await Promise.all([
     getAuthenticatedProviders(),
     (async () => {
@@ -209,6 +209,33 @@ export const getAllAvailableProviders = async () => {
   authenticatedProviders.forEach(provider => {
     providerMap.set(provider.id, provider);
   });
+
+  // If includeAllProviders is true, also add all models.dev providers without API keys
+  if (includeAllProviders) {
+    try {
+      const allModelsDevProviders = await getAllProviders();
+      const authenticatedProviderIds = new Set(authenticatedProviders.map(p => p.id));
+      const customProviderIds = new Set(customProvidersFromConfig.map(p => p.id));
+      const customVerifiedProviderIds = new Set(customVerifiedProviders.map(p => p.id));
+      
+      allModelsDevProviders.forEach(provider => {
+        // Only add if not already included (no duplicate)
+        if (!authenticatedProviderIds.has(provider.id) && 
+            !customProviderIds.has(provider.id) && 
+            !customVerifiedProviderIds.has(provider.id)) {
+          providerMap.set(provider.id, {
+            ...provider,
+            models: provider.models.map(model => ({
+              ...model,
+              id: `${provider.id}_${model.id}`
+            }))
+          });
+        }
+      });
+    } catch (error) {
+      console.warn('Warning: Could not load all models.dev providers:', error.message);
+    }
+  }
 
   return Array.from(providerMap.values());
 };

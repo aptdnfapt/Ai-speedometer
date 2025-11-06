@@ -184,7 +184,7 @@ function showHeader() {
 }
 
 // Configuration management - now using ai-benchmark-config.json for custom providers
-async function loadConfig() {
+async function loadConfig(includeAllProviders = false) {
   try {
     // Check if we need to migrate from old config
     const oldConfigFile = 'ai-benchmark-config.json';
@@ -217,7 +217,8 @@ async function loadConfig() {
     }
     
     // Load providers from both auth.json (verified) and ai-benchmark-config.json (custom)
-    const providers = await getAllAvailableProviders();
+    // Include all models.dev providers if includeAllProviders is true (for headless mode)
+    const providers = await getAllAvailableProviders(includeAllProviders);
     
     return {
       providers,
@@ -2182,8 +2183,8 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
       process.exit(1);
     }
 
-    // Load all available providers
-    const config = await loadConfig();
+    // Load all available providers (include all models.dev providers for headless mode)
+    const config = await loadConfig(true);
     
     // Find the provider (case-insensitive search)
     const provider = config.providers.find(p => 
@@ -2304,7 +2305,7 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
 }
 
 // Start the CLI
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   // Check if help flag
   if (cliArgs.help) {
     showHelp();
