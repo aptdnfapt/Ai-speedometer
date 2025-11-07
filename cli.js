@@ -2174,8 +2174,23 @@ process.on('SIGINT', () => {
 // Headless benchmark mode
 async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
   try {
-    // Parse provider:model format
-    const [providerSpec, modelName] = benchSpec.split(':');
+    // Parse provider:model format, handling quoted model IDs
+    let providerSpec, modelName;
+    const colonIndex = benchSpec.indexOf(':');
+    if (colonIndex === -1) {
+      console.error(colorText('Error: Invalid --bench format. Use: provider:model', 'red'));
+      console.error(colorText('Example: --bench zai-code-anth:glm-4.6', 'yellow'));
+      process.exit(1);
+    }
+    
+    providerSpec = benchSpec.substring(0, colonIndex);
+    modelName = benchSpec.substring(colonIndex + 1);
+    
+    // Remove quotes from model name if present
+    if ((modelName.startsWith('"') && modelName.endsWith('"')) || 
+        (modelName.startsWith("'") && modelName.endsWith("'"))) {
+      modelName = modelName.slice(1, -1);
+    }
     
     if (!providerSpec || !modelName) {
       console.error(colorText('Error: Invalid --bench format. Use: provider:model', 'red'));
@@ -2202,18 +2217,21 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
     }
 
     // Find the model
-    // Model IDs are prefixed with provider name (e.g., "zai-code-anth_glm-4.6")
-    // So we need to check:
-    // 1. Full ID match: "zai-code-anth_glm-4.6"
-    // 2. ID without provider prefix: "glm-4.6"
-    // 3. Name match: "GLM-4.6-anth"
+    // First try exact match with the provided model ID
+    // Then fall back to legacy matching for compatibility
     const model = provider.models.find(m => {
       const modelIdLower = m.id?.toLowerCase() || '';
       const modelNameLower = m.name?.toLowerCase() || '';
       const searchLower = modelName.toLowerCase();
       
-      // Check full ID match
+      // Exact ID match first (for quoted model IDs like "hf:moonshotai/Kimi-K2-Instruct-0905")
       if (modelIdLower === searchLower) return true;
+      
+      // Legacy matching for backward compatibility:
+      // Model IDs are prefixed with provider name (e.g., "zai-code-anth_glm-4.6")
+      // So we need to check:
+      // 1. ID without provider prefix: "glm-4.6"
+      // 2. Name match: "GLM-4.6-anth"
       
       // Check ID without provider prefix (strip "provider_" prefix)
       const idWithoutPrefix = modelIdLower.includes('_') 
