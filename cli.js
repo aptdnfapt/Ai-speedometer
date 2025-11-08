@@ -1350,7 +1350,7 @@ async function addCustomProviderCLI() {
       const modelName = await question(colorText('Model name: ', 'cyan'));
       if (!modelName.trim()) break;
       
-      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') + '_' + Date.now();
+      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
       models.push({
         name: modelName.trim(),
         id: modelId
@@ -1360,7 +1360,7 @@ async function addCustomProviderCLI() {
     // Single model mode
     const modelName = await question(colorText('Enter model name (e.g., gpt-4): ', 'cyan'));
     if (modelName.trim()) {
-      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') + '_' + Date.now();
+      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
       models.push({
         name: modelName.trim(),
         id: modelId
@@ -1676,7 +1676,7 @@ async function addModelsToExistingProvider() {
       const modelName = await question(colorText('Model name: ', 'cyan'));
       if (!modelName.trim()) break;
       
-      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') + '_' + Date.now();
+      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
       const modelData = {
         name: modelName.trim(),
         id: modelId
@@ -1694,7 +1694,7 @@ async function addModelsToExistingProvider() {
     // Single model mode
     const modelName = await question(colorText('Enter model name: ', 'cyan'));
     if (modelName.trim()) {
-      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') + '_' + Date.now();
+      const modelId = modelName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
       const modelData = {
         name: modelName.trim(),
         id: modelId
