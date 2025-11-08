@@ -34,7 +34,10 @@ function parseCliArgs() {
   const parsed = {
     debug: false,
     bench: null,
+    benchCustom: null,
     apiKey: null,
+    baseUrl: null,
+    endpointFormat: null,
     useAiSdk: false,
     formatted: false,
     help: false
@@ -47,8 +50,14 @@ function parseCliArgs() {
       parsed.debug = true;
     } else if (arg === '--bench') {
       parsed.bench = args[++i];
+    } else if (arg === '--bench-custom') {
+      parsed.benchCustom = args[++i];
     } else if (arg === '--api-key') {
       parsed.apiKey = args[++i];
+    } else if (arg === '--base-url') {
+      parsed.baseUrl = args[++i];
+    } else if (arg === '--endpoint-format') {
+      parsed.endpointFormat = args[++i];
     } else if (arg === '--ai-sdk') {
       parsed.useAiSdk = true;
     } else if (arg === '--formatted') {
@@ -58,7 +67,7 @@ function parseCliArgs() {
     }
   }
 
-  return parsed;
+return parsed;
 }
 
 function showHelp() {
@@ -67,21 +76,63 @@ function showHelp() {
   console.log(colorText('Usage:', 'yellow'));
   console.log('  ai-speedometer                                  ' + colorText('# Interactive mode', 'dim'));
   console.log('  ai-speedometer --bench <provider:model>         ' + colorText('# Headless benchmark', 'dim'));
+  console.log('  ai-speedometer --bench-custom <provider:model>  ' + colorText('# Custom provider benchmark', 'dim'));
   console.log('');
   console.log(colorText('Options:', 'yellow'));
-  console.log('  --bench <provider:model>    ' + colorText('Run benchmark in headless mode', 'dim'));
-  console.log('  --api-key <key>             ' + colorText('Override API key (optional)', 'dim'));
-  console.log('  --ai-sdk                    ' + colorText('Use AI SDK instead of REST API', 'dim'));
-  console.log('  --formatted                 ' + colorText('Format JSON output for human readability', 'dim'));
-  console.log('  --debug                     ' + colorText('Enable debug logging', 'dim'));
-  console.log('  --help, -h                  ' + colorText('Show this help message', 'dim'));
+  console.log('  --bench <provider:model>      ' + colorText('Run benchmark in headless mode', 'dim'));
+  console.log('  --bench-custom <provider:model> ' + colorText('Run custom provider benchmark', 'dim'));
+  console.log('  --base-url <url>              ' + colorText('Base URL for custom provider', 'dim'));
+  console.log('  --api-key <key>               ' + colorText('API key for custom provider', 'dim'));
+  console.log('  --endpoint-format <format>    ' + colorText('Endpoint format (default: chat/completions)', 'dim'));
+  console.log('  --ai-sdk                      ' + colorText('Use AI SDK instead of REST API', 'dim'));
+  console.log('  --formatted                   ' + colorText('Format JSON output for human readability', 'dim'));
+  console.log('  --debug                       ' + colorText('Enable debug logging', 'dim'));
+  console.log('  --help, -h                    ' + colorText('Show this help message', 'dim'));
   console.log('');
   console.log(colorText('Examples:', 'yellow'));
   console.log('  ai-speedometer --bench openai:gpt-4');
   console.log('  ai-speedometer --bench anthropic:claude-3-opus --api-key "sk-..."');
-  console.log('  ai-speedometer --bench openai:gpt-4 --ai-sdk');
-  console.log('  ai-speedometer --bench openai:gpt-4 --formatted');
+  console.log('  ai-speedometer --bench-custom openai:gpt-4 --base-url "https://api.openai.com/v1" --api-key "sk-..."');
+  console.log('  ai-speedometer --bench-custom anthropic:claude --base-url "https://api.anthropic.com/v1" --api-key "sk-..." --endpoint-format "messages"');
   console.log('');
+}
+
+// Parse provider:model format, handling colons in model IDs
+function parseProviderModel(arg) {
+  const firstColonIndex = arg.indexOf(':');
+  if (firstColonIndex === -1) {
+    throw new Error(`Invalid format. Use provider:model (e.g., openai:gpt-4)`);
+  }
+  
+  const provider = arg.substring(0, firstColonIndex);
+  const model = arg.substring(firstColonIndex + 1);
+  
+  return { provider, model };
+}
+
+// Create temporary custom provider from CLI args
+function createCustomProviderFromCli(cliArgs) {
+  const { provider, model } = parseProviderModel(cliArgs.benchCustom);
+  
+  // Validate required arguments
+  if (!cliArgs.baseUrl) {
+    throw new Error('--base-url is required for custom provider benchmarking');
+  }
+  if (!cliArgs.apiKey) {
+    throw new Error('--api-key is required for custom provider benchmarking');
+  }
+  
+  const endpointFormat = cliArgs.endpointFormat || 'chat/completions';
+  
+  return {
+    id: `custom-${provider}`,
+    name: provider,
+    type: 'openai-compatible', // Default to OpenAI compatible for custom providers
+    baseUrl: cliArgs.baseUrl,
+    apiKey: cliArgs.apiKey,
+    endpointFormat: endpointFormat,
+    models: [{ name: model, id: model }]
+  };
 }
 
 const cliArgs = parseCliArgs();
@@ -1746,9 +1797,12 @@ async function benchmarkSingleModelRest(model) {
       let streamedText = '';
       let tokenCount = 0;
       
-      // Use correct endpoint based on provider type
+      // Use correct endpoint based on provider type or custom format
       let endpoint;
-      if (model.providerType === 'anthropic') {
+      if (model.providerConfig.endpointFormat) {
+        // Use custom endpoint format
+        endpoint = '/' + model.providerConfig.endpointFormat;
+      } else if (model.providerType === 'anthropic') {
         endpoint = '/messages';
       } else if (model.providerType === 'google') {
         endpoint = '/models/' + actualModelId + ':streamGenerateContent';
@@ -2322,16 +2376,63 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
   }
 }
 
+// Run benchmark for custom provider from CLI args
+async function runCustomProviderBenchmark(cliArgs) {
+  try {
+    // Create temporary custom provider
+    const customProvider = createCustomProviderFromCli(cliArgs);
+    
+    log(`Running custom provider benchmark: ${customProvider.name}:${customProvider.models[0].name}`);
+    log(`Base URL: ${customProvider.baseUrl}`);
+    log(`Endpoint format: ${customProvider.endpointFormat}`);
+    
+    // Create model object for benchmarking
+    const model = {
+      ...customProvider.models[0],
+      providerName: customProvider.name,
+      providerType: customProvider.type,
+      providerId: customProvider.id,
+      providerConfig: {
+        baseUrl: customProvider.baseUrl,
+        apiKey: customProvider.apiKey,
+        endpointFormat: customProvider.endpointFormat
+      }
+    };
+    
+    // Run the benchmark using the REST API method
+    const result = await benchmarkSingleModelRest(model);
+    
+    // Output results in the same format as regular benchmarks
+    if (cliArgs.formatted) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(JSON.stringify(result));
+    }
+    
+    process.exit(result.success ? 0 : 1);
+  } catch (error) {
+    console.error(colorText('Error: ' + error.message, 'red'));
+    if (debugMode) {
+      console.error(error.stack);
+    }
+    process.exit(1);
+  }
+}
+
 // Start the CLI
-if (require.main === module) {
+if (typeof require !== 'undefined' && require.main === module) {
   // Check if help flag
   if (cliArgs.help) {
     showHelp();
     process.exit(0);
   }
   
+  // Check if custom provider benchmark mode
+  if (cliArgs.benchCustom) {
+    runCustomProviderBenchmark(cliArgs);
+  }
   // Check if headless benchmark mode
-  if (cliArgs.bench) {
+  else if (cliArgs.bench) {
     runHeadlessBenchmark(cliArgs.bench, cliArgs.apiKey, cliArgs.useAiSdk);
   } else {
     // Interactive mode
