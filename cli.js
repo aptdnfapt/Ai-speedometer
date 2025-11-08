@@ -125,7 +125,7 @@ function createCustomProviderFromCli(cliArgs) {
   const endpointFormat = cliArgs.endpointFormat || 'chat/completions';
   
   return {
-    id: `custom-${provider}`,
+    id: provider,
     name: provider,
     type: 'openai-compatible', // Default to OpenAI compatible for custom providers
     baseUrl: cliArgs.baseUrl,
@@ -1888,7 +1888,7 @@ async function benchmarkSingleModelRest(model) {
           isFirstChunk = false;
           // Show live TTFT result (only in interactive mode, not headless)
           const ttftSeconds = ((firstTokenTime - startTime) / 1000).toFixed(2);
-          if (!cliArgs.bench) {
+          if (!cliArgs.bench && !cliArgs.benchCustom) {
             console.log(colorText(`TTFT received at ${ttftSeconds}s for ${model.name}`, 'green'));
           }
         }
@@ -2226,9 +2226,55 @@ process.on('SIGINT', () => {
 });
 
 // Headless benchmark mode
-async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
+async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk, cliArgs = null) {
   try {
-    // Parse provider:model format, handling quoted model IDs
+    // Check if this is a custom provider benchmark
+    if (cliArgs && cliArgs.benchCustom) {
+      // Handle custom provider
+      const customProvider = createCustomProviderFromCli(cliArgs);
+      
+      // Create model object for benchmarking
+      const modelConfig = {
+        ...customProvider.models[0],
+        providerName: customProvider.name,
+        providerType: customProvider.type,
+        providerId: customProvider.id,
+        providerConfig: {
+          baseUrl: customProvider.baseUrl,
+          apiKey: customProvider.apiKey,
+          endpointFormat: customProvider.endpointFormat
+        },
+        selected: true
+      };
+
+      // Run benchmark silently and get results
+      const result = await benchmarkSingleModelRest(modelConfig);
+
+      // Output JSON to stdout (same format as regular benchmarks)
+      const jsonOutput = {
+        provider: customProvider.name,
+        providerId: customProvider.id,
+        model: customProvider.models[0].name,
+        modelId: customProvider.models[0].id,
+        method: 'rest-api',
+        success: result.success,
+        totalTime: result.totalTime,
+        totalTimeSeconds: result.totalTime / 1000,
+        timeToFirstToken: result.timeToFirstToken,
+        timeToFirstTokenSeconds: result.timeToFirstToken / 1000,
+        tokensPerSecond: result.tokensPerSecond,
+        outputTokens: result.tokenCount,
+        promptTokens: result.promptTokens,
+        totalTokens: result.totalTokens,
+        is_estimated: !!(result.usedEstimateForOutput || result.usedEstimateForInput),
+        error: result.error || null
+      };
+
+      console.log(JSON.stringify(jsonOutput, null, cliArgs.formatted ? 2 : 0));
+      process.exit(result.success ? 0 : 1);
+    }
+
+    // Handle regular provider:model format
     let providerSpec, modelName;
     const colonIndex = benchSpec.indexOf(':');
     if (colonIndex === -1) {
@@ -2376,49 +2422,6 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk) {
   }
 }
 
-// Run benchmark for custom provider from CLI args
-async function runCustomProviderBenchmark(cliArgs) {
-  try {
-    // Create temporary custom provider
-    const customProvider = createCustomProviderFromCli(cliArgs);
-    
-    log(`Running custom provider benchmark: ${customProvider.name}:${customProvider.models[0].name}`);
-    log(`Base URL: ${customProvider.baseUrl}`);
-    log(`Endpoint format: ${customProvider.endpointFormat}`);
-    
-    // Create model object for benchmarking
-    const model = {
-      ...customProvider.models[0],
-      providerName: customProvider.name,
-      providerType: customProvider.type,
-      providerId: customProvider.id,
-      providerConfig: {
-        baseUrl: customProvider.baseUrl,
-        apiKey: customProvider.apiKey,
-        endpointFormat: customProvider.endpointFormat
-      }
-    };
-    
-    // Run the benchmark using the REST API method
-    const result = await benchmarkSingleModelRest(model);
-    
-    // Output results in the same format as regular benchmarks
-    if (cliArgs.formatted) {
-      console.log(JSON.stringify(result, null, 2));
-    } else {
-      console.log(JSON.stringify(result));
-    }
-    
-    process.exit(result.success ? 0 : 1);
-  } catch (error) {
-    console.error(colorText('Error: ' + error.message, 'red'));
-    if (debugMode) {
-      console.error(error.stack);
-    }
-    process.exit(1);
-  }
-}
-
 // Start the CLI
 if (typeof require !== 'undefined' && require.main === module) {
   // Check if help flag
@@ -2429,11 +2432,11 @@ if (typeof require !== 'undefined' && require.main === module) {
   
   // Check if custom provider benchmark mode
   if (cliArgs.benchCustom) {
-    runCustomProviderBenchmark(cliArgs);
+    runHeadlessBenchmark(cliArgs.benchCustom, cliArgs.apiKey, cliArgs.useAiSdk, cliArgs);
   }
   // Check if headless benchmark mode
   else if (cliArgs.bench) {
-    runHeadlessBenchmark(cliArgs.bench, cliArgs.apiKey, cliArgs.useAiSdk);
+    runHeadlessBenchmark(cliArgs.bench, cliArgs.apiKey, cliArgs.useAiSdk, null);
   } else {
     // Interactive mode
     cleanupRecentModelsFromConfig().then(() => {
