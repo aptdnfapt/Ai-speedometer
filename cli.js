@@ -2273,7 +2273,7 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk, cliArgs = null)
         error: result.error || null
       };
 
-      console.log(JSON.stringify(jsonOutput, null, cliArgs.formatted ? 2 : 0));
+    console.log(JSON.stringify(jsonOutput, null, cliArgs?.formatted ? 2 : 0));
       process.exit(result.success ? 0 : 1);
     }
 
@@ -2414,7 +2414,7 @@ async function runHeadlessBenchmark(benchSpec, apiKey, useAiSdk, cliArgs = null)
       error: result.error || null
     };
 
-    console.log(JSON.stringify(jsonOutput, null, cliArgs.formatted ? 2 : 0));
+    console.log(JSON.stringify(jsonOutput, null, cliArgs?.formatted ? 2 : 0));
     process.exit(result.success ? 0 : 1);
   } catch (error) {
     console.error(colorText('Error: ' + error.message, 'red'));
