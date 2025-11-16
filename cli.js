@@ -1889,7 +1889,7 @@ async function benchmarkSingleModelRest(model) {
           // Show live TTFT result (only in interactive mode, not headless)
           const ttftSeconds = ((firstTokenTime - startTime) / 1000).toFixed(2);
           if (!cliArgs.bench && !cliArgs.benchCustom) {
-            console.log(colorText(`TTFT received at ${ttftSeconds}s for ${model.name}`, 'green'));
+            console.log(colorText(`TTFT received at ${ttftSeconds}s for ${model.name} (${model.providerName})`, 'green'));
           }
         }
 
@@ -1967,6 +1967,9 @@ async function benchmarkSingleModelRest(model) {
                 
                 if (chunk.choices?.[0]?.delta?.content) {
                   streamedText += chunk.choices[0].delta.content;
+                } else if (chunk.choices?.[0]?.delta?.reasoning) {
+                  // Handle NanoGPT reasoning tokens
+                  streamedText += chunk.choices[0].delta.reasoning;
                 }
                 
                 if (chunk.usage?.prompt_tokens) {
