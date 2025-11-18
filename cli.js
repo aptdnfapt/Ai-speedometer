@@ -1786,9 +1786,16 @@ async function benchmarkSingleModelRest(model) {
       }
       
       // Extract the actual model ID for API calls (moved before usage)
-      let actualModelId = model.name;
+      let actualModelId;
       if (model.id && model.id.includes('_')) {
+        // Strip provider prefix (e.g., "provider_model" -> "model")
         actualModelId = model.id.split('_')[1];
+      } else if (model.id) {
+        // Use raw model ID directly (e.g., "zai-org/GLM-4.5-FP8")
+        actualModelId = model.id;
+      } else {
+        // Fallback to model name
+        actualModelId = model.name;
       }
       actualModelId = actualModelId.trim();
       
