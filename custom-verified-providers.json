@@ -91,6 +91,10 @@
           "id": "moonshotai/Kimi-K2-Instruct-0905",
           "name": "Kimi K2 Instruct 0905"
         },
+        "moonshotai/kimi-k2-thinking": {
+          "id": "moonshotai/kimi-k2-thinking",
+          "name": "Kimi K2 Thinking"
+        },
         "deepseek-ai/deepseek-v3.2-exp": {
           "id": "deepseek-ai/deepseek-v3.2-exp",
           "name": "DeepSeek V3.2 Exp"
