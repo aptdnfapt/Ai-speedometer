@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
 import { usePaste } from '../hooks/usePaste.ts'
@@ -21,11 +21,11 @@ export function ModelSelectScreen() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [cursor, setCursor] = useState(0)
-  const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [allModels, setAllModels] = useState<ModelItem[]>([])
   const [recentKeys, setRecentKeys] = useState<Set<string>>(new Set())
   const [debouncedQuery, setDebouncedQuery] = useState('')
+  const scrollboxRef = useRef<any>(null)
 
   const PAGE_SIZE = Math.max(3, height - 14)
   const CARD_W = Math.min(60, width - 4)
@@ -73,7 +73,6 @@ export function ModelSelectScreen() {
 
   useEffect(() => {
     setCursor(0)
-    setPage(0)
   }, [debouncedQuery])
 
   function isRecent(m: ModelItem): boolean {
@@ -117,16 +116,22 @@ export function ModelSelectScreen() {
     return rows
   })()
 
-  // navigable model count
-  const modelRowCount = allRows.filter(r => r.kind === 'model').length
+  // cursor is global model index across all rows
+  const allModelRows = allRows.filter(r => r.kind === 'model') as Extract<ListRow, { kind: 'model' }>[]
+  const cursorModel = allModelRows[cursor]?.model
 
-  // pagination over all rows (separators take up visual space)
-  const totalPages = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE))
-  const pageRows = allRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-
-  // cursor is index into model rows only
-  const pageModelRows = pageRows.filter(r => r.kind === 'model') as Extract<ListRow, { kind: 'model' }>[]
-  const cursorModel = pageModelRows[cursor]?.model
+  // keep cursor row visible — only scroll when it goes out of the viewport
+  useEffect(() => {
+    const sb = scrollboxRef.current
+    if (!sb) return
+    const top = sb.scrollTop
+    const visible = PAGE_SIZE
+    if (cursor < top) {
+      sb.scrollTo(cursor)
+    } else if (cursor >= top + visible) {
+      sb.scrollTo(cursor - visible + 1)
+    }
+  }, [cursor, PAGE_SIZE])
 
   const launchBench = useCallback((models: Model[]) => {
     dispatch({ type: 'BENCH_START', models })
@@ -145,17 +150,15 @@ export function ModelSelectScreen() {
       return
     }
     if (key.name === 'down') {
-      setCursor(c => Math.min(pageModelRows.length - 1, c + 1))
+      setCursor(c => Math.min(allModelRows.length - 1, c + 1))
       return
     }
     if (key.name === 'pageup') {
-      setPage(p => Math.max(0, p - 1))
-      setCursor(0)
+      setCursor(c => Math.max(0, c - PAGE_SIZE))
       return
     }
     if (key.name === 'pagedown') {
-      setPage(p => Math.min(totalPages - 1, p + 1))
-      setCursor(0)
+      setCursor(c => Math.min(allModelRows.length - 1, c + PAGE_SIZE))
       return
     }
     if (key.name === 'tab') {
@@ -208,9 +211,6 @@ export function ModelSelectScreen() {
   const nameW = Math.floor((CARD_W - 10) / 2)
   const provW = CARD_W - nameW - 10
 
-  // map model index on page → cursor position
-  let pageModelCursor = 0
-
   return (
     <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
       <box
@@ -229,48 +229,51 @@ export function ModelSelectScreen() {
 
         <box height={1} backgroundColor="#292e42" />
 
-        {/* model list — fixed height */}
-        <box flexDirection="column" height={PAGE_SIZE} overflow="hidden" paddingTop={1} paddingBottom={1}>
-          {pageRows.length === 0 && (
+        {/* model list — scrollable */}
+        <scrollbox ref={scrollboxRef} height={PAGE_SIZE} style={{ scrollbarOptions: { showArrows: true, trackOptions: { foregroundColor: '#7aa2f7', backgroundColor: '#292e42' } } }}>
+          {allRows.length === 0 && (
             <box height={1} paddingLeft={2}>
               <text fg="#565f89">No models found</text>
             </box>
           )}
-          {pageRows.map((row, i) => {
-            if (row.kind === 'separator') {
+          {(() => {
+            let modelCursor = 0
+            return allRows.map((row, i) => {
+              if (row.kind === 'separator') {
+                return (
+                  <box key={`sep-${i}`} height={1} paddingLeft={2}>
+                    <text fg="#565f89">{row.label}</text>
+                  </box>
+                )
+              }
+
+              const localCursor = modelCursor++
+              const isActive = localCursor === cursor
+              const isSel = selected.has(row.model.key)
+
+              let nameFg = '#565f89'
+              if (isActive && isSel) nameFg = '#7dcfff'
+              else if (isActive)    nameFg = '#c0caf5'
+              else if (isSel)       nameFg = '#9ece6a'
+
               return (
-                <box key={`sep-${i}`} height={1} paddingLeft={2}>
-                  <text fg="#565f89">{row.label}</text>
+                <box
+                  key={row.model.key}
+                  height={1}
+                  width="100%"
+                  flexDirection="row"
+                  backgroundColor={isActive ? '#292e42' : 'transparent'}
+                >
+                  <text fg="#565f89" width={2}> </text>
+                  <text fg={nameFg} width={nameW}>{row.model.name}</text>
+                  <text fg={isActive ? '#7aa2f7' : '#565f89'} width={provW}>{row.model.providerName}</text>
+                  <text fg="#9ece6a" width={2}>{isSel ? '✓' : ' '}</text>
+                  <text fg="#7dcfff" width={2}>{isActive ? '›' : ' '}</text>
                 </box>
               )
-            }
-
-            const localCursor = pageModelCursor++
-            const isActive = localCursor === cursor
-            const isSel = selected.has(row.model.key)
-
-            let nameFg = '#565f89'
-            if (isActive && isSel) nameFg = '#7dcfff'
-            else if (isActive)    nameFg = '#c0caf5'
-            else if (isSel)       nameFg = '#9ece6a'
-
-            return (
-              <box
-                key={row.model.key}
-                height={1}
-                width="100%"
-                flexDirection="row"
-                backgroundColor={isActive ? '#292e42' : 'transparent'}
-              >
-                <text fg="#565f89" width={2}> </text>
-                <text fg={nameFg} width={nameW}>{row.model.name}</text>
-                <text fg={isActive ? '#7aa2f7' : '#565f89'} width={provW}>{row.model.providerName}</text>
-                <text fg="#9ece6a" width={2}>{isSel ? '✓' : ' '}</text>
-                <text fg="#7dcfff" width={2}>{isActive ? '›' : ' '}</text>
-              </box>
-            )
-          })}
-        </box>
+            })
+          })()}
+        </scrollbox>
 
         <box height={1} backgroundColor="#292e42" />
 
@@ -278,8 +281,7 @@ export function ModelSelectScreen() {
         <box flexDirection="row" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
           <text fg="#bb9af7">Selected: {selected.size} model{selected.size !== 1 ? 's' : ''}</text>
           {recentCount > 0 && <text fg="#565f89">   [R] recent ({recentCount})</text>}
-          {totalPages > 1 && <text fg="#7dcfff">   Page {page + 1}/{totalPages}</text>}
-          {page < totalPages - 1 && <text fg="#565f89">   ↓ more</text>}
+          <text fg="#565f89">   [↑↓/PgUp/PgDn/wheel] scroll</text>
         </box>
       </box>
     </box>

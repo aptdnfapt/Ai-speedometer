@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
 import { usePaste } from '../hooks/usePaste.ts'
@@ -18,8 +18,8 @@ export function AddVerifiedScreen() {
   const [allProviders, setAllProviders] = useState<ProviderInfo[]>([])
   const [filtered, setFiltered] = useState<ProviderInfo[]>([])
   const [cursor, setCursor] = useState(0)
-  const [page, setPage] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
+  const scrollboxRef = useRef<any>(null)
   const [selectedProvider, setSelectedProvider] = useState<ProviderInfo | null>(null)
   const [apiKey, setApiKey] = useState('')
   const [saving, setSaving] = useState(false)
@@ -51,11 +51,19 @@ export function AddVerifiedScreen() {
       ))
     }
     setCursor(0)
-    setPage(0)
   }, [searchQuery, allProviders])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const pageItems = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  useEffect(() => {
+    const sb = scrollboxRef.current
+    if (!sb) return
+    const top = sb.scrollTop
+    const visible = PAGE_SIZE
+    if (cursor < top) {
+      sb.scrollTo(cursor)
+    } else if (cursor >= top + visible) {
+      sb.scrollTo(cursor - visible + 1)
+    }
+  }, [cursor, PAGE_SIZE])
 
   async function save() {
     if (!selectedProvider || !apiKey.trim()) return
@@ -93,21 +101,19 @@ export function AddVerifiedScreen() {
         return
       }
       if (key.name === 'down') {
-        setCursor(c => Math.min(pageItems.length - 1, c + 1))
+        setCursor(c => Math.min(filtered.length - 1, c + 1))
         return
       }
       if (key.name === 'pageup') {
-        setPage(p => Math.max(0, p - 1))
-        setCursor(0)
+        setCursor(c => Math.max(0, c - PAGE_SIZE))
         return
       }
       if (key.name === 'pagedown') {
-        setPage(p => Math.min(totalPages - 1, p + 1))
-        setCursor(0)
+        setCursor(c => Math.min(filtered.length - 1, c + PAGE_SIZE))
         return
       }
       if (key.name === 'return' || key.name === 'enter') {
-        const prov = pageItems[cursor]
+        const prov = filtered[cursor]
         if (prov) {
           setSelectedProvider(prov)
           setApiKey('')
@@ -243,18 +249,18 @@ export function AddVerifiedScreen() {
 
         <box height={1} backgroundColor="#292e42" />
 
-        <box flexDirection="column" height={PAGE_SIZE} overflow="hidden" paddingTop={1} paddingBottom={1}>
+        <scrollbox ref={scrollboxRef} height={PAGE_SIZE} style={{ scrollbarOptions: { showArrows: true, trackOptions: { foregroundColor: '#7aa2f7', backgroundColor: '#292e42' } } }}>
           {loadError && (
             <box height={1} paddingLeft={2}>
               <text fg="#f7768e">Error loading providers: {loadError}</text>
             </box>
           )}
-          {!loadError && pageItems.length === 0 && (
+          {!loadError && filtered.length === 0 && (
             <box height={1} paddingLeft={2}>
               <text fg="#565f89">{allProviders.length === 0 ? 'Loading...' : 'No providers found'}</text>
             </box>
           )}
-          {pageItems.map((prov, i) => {
+          {filtered.map((prov, i) => {
             const isActive = i === cursor
             return (
               <box
@@ -271,13 +277,13 @@ export function AddVerifiedScreen() {
               </box>
             )
           })}
-        </box>
+        </scrollbox>
 
         <box height={1} backgroundColor="#292e42" />
 
         <box flexDirection="row" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
           <text fg="#565f89">{filtered.length} providers</text>
-          {totalPages > 1 && <text fg="#7dcfff">   Page {page + 1}/{totalPages}  [PgUp/PgDn]</text>}
+          <text fg="#565f89">   [↑↓/PgUp/PgDn/wheel] scroll</text>
         </box>
       </box>
     </box>
