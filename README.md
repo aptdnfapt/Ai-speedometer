@@ -2,8 +2,9 @@
 
 A CLI tool for benchmarking AI models across multiple providers with parallel execution and performance metrics.
 
-[![Website](https://img.shields.io/badge/Website-ai--speedometer.oliveowl.xyz-7aa2f7?style=for-the-badge&logo=globe)](https://ai-speedometer.oliveowl.xyz/)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/6S7HwCxbMy)
+
+Track OSS model speeds over time: [ai-speedometer.oliveowl.xyz](https://ai-speedometer.oliveowl.xyz/)
 
 ![Ai-speedometer main menu](./pics/main.png)
 
