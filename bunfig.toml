@@ -1,0 +1,2 @@
+[test]
+include = ["src/tests/**/*.test.ts", "src/tests/**/*.test.tsx"]

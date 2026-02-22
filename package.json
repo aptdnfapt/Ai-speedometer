@@ -2,7 +2,7 @@
   "name": "ai-speedometer",
   "version": "1.4.3",
   "description": "A comprehensive CLI tool for benchmarking AI models across multiple providers with parallel execution and professional metrics",
-  "main": "cli.js",
+  "main": "src/index.ts",
   "bin": {
     "ai-speedometer": "dist/ai-speedometer",
     "aispeed": "dist/ai-speedometer"
@@ -13,13 +13,11 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node cli.js",
-    "cli": "node cli.js",
-    "cli:debug": "node cli.js --debug",
-    "build": "esbuild cli.js --bundle --platform=node --outfile=dist/ai-speedometer --format=cjs --minify --external:jsonc-parser --external:dotenv && sed -i '1s|^.*|#!/usr/bin/env node|' dist/ai-speedometer",
-    "build:dev": "esbuild cli.js --bundle --platform=node --outfile=dist/ai-speedometer --format=cjs --external:jsonc-parser --external:dotenv && sed -i '1s|^.*|#!/usr/bin/env node|' dist/ai-speedometer",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts",
+    "test": "bun test",
+    "build": "bun build src/index.ts --outfile dist/ai-speedometer --target bun",
+    "prepublishOnly": "bun run build"
   },
   "keywords": [
     "ai",
