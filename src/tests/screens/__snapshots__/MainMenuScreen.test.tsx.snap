@@ -1,0 +1,29 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`MainMenuScreen snapshot: MainMenuScreen initial state 1`] = `
+"                                                                                
+                                                                                
+                                                                                
+             ▄▀█ █ ▄▄ █▀▀ █▀█ █▀▀ █▀▀ █▀▄ █▀█ █▀▄▀█ █▀▀ ▀█▀ █▀▀ █▀█             
+             █▀█ █    ▄▄█ █▀▀ ██▄ ██▄ █▄▀ █▄█ █ ▀ █ ██▄  █  ██▄ █▀▄             
+                                     v1.4.3                                     
+                                                                                
+                                                                                
+                 ╭────────────────────────────────────────────╮                 
+                 │                                            │                 
+                 │  ⚡ Run Benchmark                       ›  │                 
+                 │  test model speed & throughput             │                 
+                 │                                            │                 
+                 │                                            │                 
+                 │  ⚙  Manage Models                          │                 
+                 │  add providers and configure               │                 
+                 │                                            │                 
+                 │                                            │                 
+                 │  ✕  Exit                                   │                 
+                 │  quit the application                      │                 
+                 │                                            │                 
+                 ╰────────────────────────────────────────────╯                 
+                                                                                
+                                                                                
+"
+`;

@@ -1,0 +1,35 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`AddCustomScreen snapshot: AddCustomScreen initial state 1`] = `
+"                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+          ╭──────────────────────────────────────────────────────────╮          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │  ① Type  ② ID  ③ Name  ④ URL  ⑤ Key  ⑥ Models            │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │   OpenAI Compatible ›                                    │          
+          │   Anthropic                                              │          
+          │   Back                                                   │          
+          │                                                          │          
+          ╰──────────────────────────────────────────────────────────╯          
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+"
+`;

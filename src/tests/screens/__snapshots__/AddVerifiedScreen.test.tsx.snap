@@ -1,0 +1,35 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`AddVerifiedScreen snapshot: AddVerifiedScreen initial state 1`] = `
+"                                                                                
+                                                                                
+                                                                                
+         ╭────────────────────────────────────────────────────────────╮         
+         │                                                            │         
+         │  Search: _                                                 │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │  Loading...                                                │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │                                                            │         
+         │  0 providers                                               │         
+         │                                                            │         
+         ╰────────────────────────────────────────────────────────────╯         
+                                                                                
+                                                                                
+                                                                                
+"
+`;

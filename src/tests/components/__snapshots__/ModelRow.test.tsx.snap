@@ -1,0 +1,29 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`ModelRow snapshot: ModelRow pending 1`] = `
+"  ·  GPT-4  (OpenAI)  waiting...                                                
+                                                                                
+                                                                                
+"
+`;
+
+exports[`ModelRow snapshot: ModelRow running frame=3 1`] = `
+"  ⠸  GPT-4  (OpenAI)  0.0s...                                                   
+                                                                                
+                                                                                
+"
+`;
+
+exports[`ModelRow snapshot: ModelRow done 1`] = `
+"  ✓  GPT-4  (OpenAI)  50.0 tok/s  2.00s                                         
+                                                                                
+                                                                                
+"
+`;
+
+exports[`ModelRow snapshot: ModelRow error 1`] = `
+"  ✗  GPT-4  (OpenAI)  timeout                                                   
+                                                                                
+                                                                                
+"
+`;

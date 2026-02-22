@@ -1,0 +1,29 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`MenuList snapshot: MenuList 3 items selected=0 1`] = `
+" Item One                             › 
+ Item Two                               
+ Item Three                             
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+"
+`;
+
+exports[`MenuList snapshot: MenuList 3 items selected=2 1`] = `
+" Item One                               
+ Item Two                               
+ Item Three                           › 
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+"
+`;

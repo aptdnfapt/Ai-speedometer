@@ -1,0 +1,35 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`ModelSelectScreen snapshot: ModelSelectScreen initial state 1`] = `
+"                                                                                
+                                                                                
+          ╭──────────────────────────────────────────────────────────╮          
+          │                                                          │          
+          │  Search: _                                               │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │  No models found                                         │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │                                                          │          
+          │  Selected: 0 models                                      │          
+          │                                                          │          
+          ╰──────────────────────────────────────────────────────────╯          
+                                                                                
+                                                                                
+"
+`;

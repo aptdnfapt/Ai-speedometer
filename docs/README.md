@@ -84,6 +84,19 @@ The system supports three types of providers:
 
 ## Recent Updates
 
+### Phase 7 — Tests
+
+Comprehensive test suite using `bun test` + `@opentui/react/test-utils`:
+
+- **51 tests** across 11 files — all passing
+- Component tests: Header, Footer, MenuList, BarChart, ModelRow, ResultsTable
+- Screen tests: MainMenuScreen, ModelSelectScreen, AddVerifiedScreen, AddCustomScreen
+- Benchmark logic tests with mocked fetch (openai-compatible, anthropic, google)
+- 14 snapshots for visual regression detection
+- Test factories in `src/tests/setup.ts`: `mockModel`, `mockBenchmarkResult`, `mockProvider`, `mockModelBenchState`
+
+Run with: `bun test`
+
 ### Version 1.0 Bug Fixes
 
 The latest release includes critical fixes for:

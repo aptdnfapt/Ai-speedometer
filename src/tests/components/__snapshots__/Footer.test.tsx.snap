@@ -1,0 +1,8 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`Footer snapshot: Footer with 3 hints 1`] = `
+" [↑↓] navigate  ·  [Enter] select  ·  [Ctrl+C] quit                                                                     
+                                                                                                                        
+                                                                                                                        
+"
+`;

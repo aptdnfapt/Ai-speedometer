@@ -1,0 +1,25 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`ResultsTable snapshot: ResultsTable 1 done 2 pending 1`] = `
+"    # │ Model              │ Provider     │    Time(s) │  TTFT(s) │  Tokens/Sec │      Out │       In │    Total        
+ ────────────────────────────────────────────────────────────────────────────────────────────────                       
+    1 │ gpt-4              │ OpenAI       │       2.00 │     0.30 │        50.0 │      100 │       20 │      120        
+ ────────────────────────────────────────────────────────────────────────────────────────────────                       
+   Waiting for 2 more results...                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+                                                                                                                        
+"
+`;
