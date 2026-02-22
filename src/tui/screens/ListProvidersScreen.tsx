@@ -24,9 +24,9 @@ export function ListProvidersScreen() {
   if (providers.length === 0) {
     return (
       <box flexDirection="column" flexGrow={1} padding={1}>
-        <text fg="#FF00FF">Configured Providers</text>
+        <text fg="#7aa2f7">Configured Providers</text>
         <box marginTop={1}>
-          <text fg="yellow">No providers configured yet.</text>
+          <text fg="#ff9e64">No providers configured yet.</text>
         </box>
       </box>
     )
@@ -34,17 +34,17 @@ export function ListProvidersScreen() {
 
   return (
     <box flexDirection="column" flexGrow={1} padding={1}>
-      <text fg="#FF00FF">Configured Providers</text>
+      <text fg="#7aa2f7">Configured Providers</text>
       <box marginTop={1} flexGrow={1}>
         <scrollbox focused>
           {providers.map((provider, i) => (
-            <box key={i} flexDirection="column" border borderStyle="single" borderColor="#444444" marginBottom={1} padding={1}>
+            <box key={i} flexDirection="column" border borderStyle="rounded" borderColor="#292e42" backgroundColor="#16161e" marginBottom={1} padding={1}>
               <box flexDirection="row">
-                <text fg="#00FFFF">{provider.name}</text>
-                <text fg="#555555">  [{provider.type}]</text>
+                <text fg="#7dcfff">{provider.name}</text>
+                <text fg="#565f89">  [{provider.type}]</text>
               </box>
               {provider.models.map((model, j) => (
-                <text key={j} fg="#888888">  · {model.name || model.id}</text>
+                <text key={j} fg="#565f89">  · {model.name || model.id}</text>
               ))}
             </box>
           ))}

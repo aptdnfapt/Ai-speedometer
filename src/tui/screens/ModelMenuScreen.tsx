@@ -29,7 +29,7 @@ export function ModelMenuScreen() {
 
   return (
     <box flexDirection="column" flexGrow={1} padding={1}>
-      <text fg="#FF00FF">Model Management</text>
+      <text fg="#7aa2f7">Model Management</text>
       <box marginTop={1}>
         <MenuList items={ITEMS} onSelect={handleSelect} />
       </box>

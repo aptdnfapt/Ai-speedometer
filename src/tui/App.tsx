@@ -17,6 +17,8 @@ function getHints(screen: Screen): string[] {
       return ['[↑↓] navigate', '[Enter] select', '[Ctrl+C] quit']
     case 'model-menu':
       return ['[↑↓] navigate', '[Enter] select', '[q] back']
+    case 'model-select':
+      return ['[↑↓] navigate', '[Tab] select', '[Enter] run', '[A] all', '[N] none', '[R] recent', '[q] back']
     case 'list-providers':
       return ['[↑↓] scroll', '[q] back']
     default:

@@ -35,16 +35,21 @@ export function MenuList({ items, selectedIndex: initialIndex = 0, onSelect, onN
       {items.map((item, i) => {
         const isSelected = i === cursor
         return (
-          <box key={i} flexDirection="row" marginBottom={0}>
-            <text fg={isSelected ? '#00FF00' : '#555555'}>
-              {isSelected ? '● ' : '○ '}
-            </text>
-            <text fg={isSelected ? '#00FF00' : '#CCCCCC'}>
-              {item.label}
-            </text>
-            {item.description ? (
-              <text fg="#555555">  {item.description}</text>
-            ) : null}
+          <box
+            key={i}
+            flexDirection="row"
+            alignItems="center"
+            backgroundColor={isSelected ? '#292e42' : 'transparent'}
+            paddingLeft={1}
+            paddingRight={1}
+          >
+            <box flexDirection="column" flexGrow={1}>
+              <text fg={isSelected ? '#c0caf5' : '#565f89'}>{item.label}</text>
+              {item.description ? (
+                <text fg={isSelected ? '#565f89' : '#292e42'}>{item.description}</text>
+              ) : null}
+            </box>
+            {isSelected && <text fg="#7aa2f7">›</text>}
           </box>
         )
       })}
