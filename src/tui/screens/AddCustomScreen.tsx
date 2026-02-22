@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
+import { usePaste } from '../hooks/usePaste.ts'
 
 type ProviderType = 'openai-compatible' | 'anthropic'
 type Step = 'type' | 'id' | 'name' | 'url' | 'key' | 'models' | 'saving' | 'done'
@@ -62,6 +63,14 @@ export function AddCustomScreen() {
       setStep('models')
     }
   }
+
+  usePaste((text) => {
+    if (step === 'id')     setProviderId(v => v + text)
+    else if (step === 'name')   setProviderName(v => v + text)
+    else if (step === 'url')    setBaseUrl(v => v + text)
+    else if (step === 'key')    setApiKey(v => v + text)
+    else if (step === 'models') setModelInput(v => v + text)
+  })
 
   useKeyboard((key) => {
     if (step === 'done') {

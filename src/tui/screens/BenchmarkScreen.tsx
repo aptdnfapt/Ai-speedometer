@@ -145,6 +145,9 @@ export function BenchmarkScreen() {
 
   return (
     <box flexDirection="column" flexGrow={1} padding={1}>
+      <box alignItems="center" justifyContent="center" marginBottom={1}>
+        <ascii-font text="AI-SPEEDOMETER" font="tiny" color="#7aa2f7" />
+      </box>
       <box
         flexDirection="column"
         border

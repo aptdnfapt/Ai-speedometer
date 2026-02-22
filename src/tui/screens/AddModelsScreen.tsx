@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
+import { usePaste } from '../hooks/usePaste.ts'
 import type { Provider } from '../../types.ts'
 
 type Step = 'pick' | 'add'
@@ -35,6 +36,10 @@ export function AddModelsScreen() {
     }
     load()
   }, [])
+
+  usePaste((text) => {
+    if (step === 'add') setModelInput(v => v + text)
+  })
 
   useKeyboard((key) => {
     if (done) {

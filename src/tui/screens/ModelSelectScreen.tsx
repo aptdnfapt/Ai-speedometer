@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
+import { usePaste } from '../hooks/usePaste.ts'
 import type { Model } from '../../types.ts'
 
 interface ModelItem extends Model {
@@ -131,6 +132,10 @@ export function ModelSelectScreen() {
     dispatch({ type: 'BENCH_START', models })
     navigate('benchmark')
   }, [dispatch, navigate])
+
+  usePaste((text) => {
+    setSearchQuery(q => q + text)
+  })
 
   useKeyboard((key) => {
     if (key.name === 'escape') { navigate('main-menu'); return }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
+import { usePaste } from '../hooks/usePaste.ts'
 import type { ProviderInfo } from '../../models-dev.ts'
 
 type Step = 'browse' | 'confirm'
@@ -75,6 +76,11 @@ export function AddVerifiedScreen() {
       setSaving(false)
     }
   }
+
+  usePaste((text) => {
+    if (step === 'browse') setSearchQuery(q => q + text)
+    else if (step === 'confirm') setApiKey(k => k + text)
+  })
 
   useKeyboard((key) => {
     if (step === 'browse') {
