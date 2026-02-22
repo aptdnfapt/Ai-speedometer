@@ -7,6 +7,10 @@ interface ModelItem extends Model {
   key: string
 }
 
+type ListRow =
+  | { kind: 'model'; model: ModelItem; idx: number }
+  | { kind: 'separator'; label: string }
+
 const DEBOUNCE_MS = 50
 
 export function ModelSelectScreen() {
@@ -19,7 +23,7 @@ export function ModelSelectScreen() {
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [allModels, setAllModels] = useState<ModelItem[]>([])
-  const [recentIds, setRecentIds] = useState<Set<string>>(new Set())
+  const [recentKeys, setRecentKeys] = useState<Set<string>>(new Set())
   const [debouncedQuery, setDebouncedQuery] = useState('')
 
   const PAGE_SIZE = Math.max(3, height - 14)
@@ -47,10 +51,15 @@ export function ModelSelectScreen() {
       try {
         const { getRecentModels, cleanupRecentModelsFromConfig } = await import('../../../ai-config.js')
         await cleanupRecentModelsFromConfig()
-        const recents: Array<{ modelId: string }> = await getRecentModels()
-        setRecentIds(new Set(recents.map(r => r.modelId)))
+        const recents: Array<{ modelId: string; providerName?: string }> = await getRecentModels()
+        const keys = new Set<string>()
+        for (const r of recents) {
+          keys.add(r.modelId)
+          if (r.providerName) keys.add(`${r.modelId}|${r.providerName}`)
+        }
+        setRecentKeys(keys)
       } catch {
-        setRecentIds(new Set())
+        setRecentKeys(new Set())
       }
     }
     loadRecents()
@@ -66,27 +75,57 @@ export function ModelSelectScreen() {
     setPage(0)
   }, [debouncedQuery])
 
-  const filteredModels: ModelItem[] = (() => {
+  function isRecent(m: ModelItem): boolean {
+    return recentKeys.has(m.id) || recentKeys.has(`${m.id}|${m.providerName}`)
+  }
+
+  // ordered model list — recents first when no query
+  const orderedModels: ModelItem[] = (() => {
     if (!debouncedQuery) {
-      const recents = allModels.filter(m => recentIds.has(m.id))
-      const rest = allModels.filter(m => !recentIds.has(m.id))
+      const recents = allModels.filter(m => isRecent(m))
+      const rest    = allModels.filter(m => !isRecent(m))
       return [...recents, ...rest]
     }
-    const q = debouncedQuery.toLowerCase()
-    return allModels.filter(m =>
-      m.name.toLowerCase().includes(q) ||
-      m.providerName.toLowerCase().includes(q) ||
-      m.providerId.toLowerCase().includes(q) ||
-      m.id.toLowerCase().includes(q)
-    )
+    const words = debouncedQuery.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+    return allModels.filter(m => {
+      const haystack = `${m.name} ${m.providerName} ${m.providerId} ${m.id}`.toLowerCase()
+      return words.every(w => haystack.includes(w))
+    })
   })()
 
-  const totalPages = Math.max(1, Math.ceil(filteredModels.length / PAGE_SIZE))
-  const pageModels = filteredModels.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const recentCount = !debouncedQuery ? orderedModels.filter(m => isRecent(m)).length : 0
 
-  const recentCount = !debouncedQuery
-    ? filteredModels.filter(m => recentIds.has(m.id)).length
-    : 0
+  // build flat row list including separator rows — separators don't count as navigable
+  const allRows: ListRow[] = (() => {
+    const rows: ListRow[] = []
+    let modelIdx = 0
+    for (let i = 0; i < orderedModels.length; i++) {
+      const m = orderedModels[i]
+      const mIsRecent = isRecent(m)
+      const prevIsRecent = i > 0 ? isRecent(orderedModels[i - 1]) : false
+
+      if (!debouncedQuery && recentCount > 0) {
+        if (i === 0 && mIsRecent) {
+          rows.push({ kind: 'separator', label: '── recent ──' })
+        } else if (!mIsRecent && prevIsRecent) {
+          rows.push({ kind: 'separator', label: '── all models ──' })
+        }
+      }
+      rows.push({ kind: 'model', model: m, idx: modelIdx++ })
+    }
+    return rows
+  })()
+
+  // navigable model count
+  const modelRowCount = allRows.filter(r => r.kind === 'model').length
+
+  // pagination over all rows (separators take up visual space)
+  const totalPages = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE))
+  const pageRows = allRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  // cursor is index into model rows only
+  const pageModelRows = pageRows.filter(r => r.kind === 'model') as Extract<ListRow, { kind: 'model' }>[]
+  const cursorModel = pageModelRows[cursor]?.model
 
   const launchBench = useCallback((models: Model[]) => {
     dispatch({ type: 'BENCH_START', models })
@@ -94,16 +133,14 @@ export function ModelSelectScreen() {
   }, [dispatch, navigate])
 
   useKeyboard((key) => {
-    if (key.name === 'escape') {
-      navigate('main-menu')
-      return
-    }
+    if (key.name === 'escape') { navigate('main-menu'); return }
+
     if (key.name === 'up') {
-      setCursor(c => (c - 1 + pageModels.length) % Math.max(1, pageModels.length))
+      setCursor(c => Math.max(0, c - 1))
       return
     }
     if (key.name === 'down') {
-      setCursor(c => (c + 1) % Math.max(1, pageModels.length))
+      setCursor(c => Math.min(pageModelRows.length - 1, c + 1))
       return
     }
     if (key.name === 'pageup') {
@@ -117,12 +154,11 @@ export function ModelSelectScreen() {
       return
     }
     if (key.name === 'tab') {
-      const model = pageModels[cursor]
-      if (!model) return
+      if (!cursorModel) return
       setSelected(prev => {
         const next = new Set(prev)
-        if (next.has(model.key)) next.delete(model.key)
-        else next.add(model.key)
+        if (next.has(cursorModel.key)) next.delete(cursorModel.key)
+        else next.add(cursorModel.key)
         return next
       })
       return
@@ -130,22 +166,21 @@ export function ModelSelectScreen() {
     if (key.name === 'return' || key.name === 'enter') {
       if (selected.size > 0) {
         launchBench(allModels.filter(m => selected.has(m.key)))
-      } else {
-        const model = pageModels[cursor]
-        if (model) launchBench([model])
+      } else if (cursorModel) {
+        launchBench([cursorModel])
       }
       return
     }
-    if (!searchQuery && key.sequence === 'a') {
-      setSelected(new Set(filteredModels.map(m => m.key)))
+    if (!searchQuery && (key.sequence === 'A' || key.sequence === 'a')) {
+      setSelected(new Set(orderedModels.map(m => m.key)))
       return
     }
-    if (!searchQuery && key.sequence === 'n') {
+    if (!searchQuery && (key.sequence === 'N' || key.sequence === 'n')) {
       setSelected(new Set())
       return
     }
-    if (!searchQuery && recentCount > 0 && key.sequence === 'r') {
-      launchBench(filteredModels.slice(0, recentCount))
+    if (!searchQuery && recentCount > 0 && (key.sequence === 'R' || key.sequence === 'r')) {
+      launchBench(orderedModels.slice(0, recentCount))
       return
     }
     if (key.name === 'backspace' || key.name === 'delete') {
@@ -156,6 +191,12 @@ export function ModelSelectScreen() {
       setSearchQuery(q => q + key.sequence)
     }
   })
+
+  const nameW = Math.floor((CARD_W - 10) / 2)
+  const provW = CARD_W - nameW - 10
+
+  // map model index on page → cursor position
+  let pageModelCursor = 0
 
   return (
     <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
@@ -173,82 +214,59 @@ export function ModelSelectScreen() {
           <text fg="#c0caf5">{searchQuery}_</text>
         </box>
 
-        {/* divider line */}
         <box height={1} backgroundColor="#292e42" />
 
-        {/* model list — fixed height, overflow hidden */}
-        <box
-          flexDirection="column"
-          height={PAGE_SIZE}
-          overflow="hidden"
-          paddingTop={1}
-          paddingBottom={1}
-        >
-          {pageModels.length === 0 && (
-            <box paddingLeft={2}>
+        {/* model list — fixed height */}
+        <box flexDirection="column" height={PAGE_SIZE} overflow="hidden" paddingTop={1} paddingBottom={1}>
+          {pageRows.length === 0 && (
+            <box height={1} paddingLeft={2}>
               <text fg="#565f89">No models found</text>
             </box>
           )}
-          {pageModels.map((model, i) => {
-            const isActive = i === cursor
-            const isSel = selected.has(model.key)
-            const isRecent = !debouncedQuery && recentIds.has(model.id)
-            const globalIdx = page * PAGE_SIZE + i
-            const prevModel = filteredModels[globalIdx - 1]
-            const prevIsRecent = globalIdx > 0 && !debouncedQuery && prevModel !== undefined && recentIds.has(prevModel.id)
+          {pageRows.map((row, i) => {
+            if (row.kind === 'separator') {
+              return (
+                <box key={`sep-${i}`} height={1} paddingLeft={2}>
+                  <text fg="#565f89">{row.label}</text>
+                </box>
+              )
+            }
+
+            const localCursor = pageModelCursor++
+            const isActive = localCursor === cursor
+            const isSel = selected.has(row.model.key)
 
             let nameFg = '#565f89'
             if (isActive && isSel) nameFg = '#7dcfff'
-            else if (isActive) nameFg = '#c0caf5'
-            else if (isSel) nameFg = '#9ece6a'
-
-            const nameW = Math.floor((CARD_W - 10) / 2)
-            const provW = CARD_W - nameW - 10
+            else if (isActive)    nameFg = '#c0caf5'
+            else if (isSel)       nameFg = '#9ece6a'
 
             return (
-              <box key={model.key} flexDirection="column">
-                {/* recent section label */}
-                {!debouncedQuery && recentCount > 0 && globalIdx === 0 && isRecent && (
-                  <box height={1} paddingLeft={2}>
-                    <text fg="#565f89">── recent ──</text>
-                  </box>
-                )}
-                {/* separator after recent block */}
-                {!debouncedQuery && recentCount > 0 && !isRecent && prevIsRecent && (
-                  <box height={1} paddingLeft={2}>
-                    <text fg="#292e42">────────────</text>
-                  </box>
-                )}
-                {/* row — fixed height=1, full width highlight */}
-                <box
-                  height={1}
-                  width="100%"
-                  flexDirection="row"
-                  backgroundColor={isActive ? '#292e42' : 'transparent'}
-                >
-                  <text fg="#565f89" width={2}> </text>
-                  <text fg={nameFg} width={nameW}>{model.name}</text>
-                  <text fg={isActive ? '#7aa2f7' : '#565f89'} width={provW}>{model.providerName}</text>
-                  <text fg="#9ece6a" width={2}>{isSel ? '✓' : ' '}</text>
-                  <text fg="#7dcfff" width={2}>{isActive ? '›' : ' '}</text>
-                </box>
+              <box
+                key={row.model.key}
+                height={1}
+                width="100%"
+                flexDirection="row"
+                backgroundColor={isActive ? '#292e42' : 'transparent'}
+              >
+                <text fg="#565f89" width={2}> </text>
+                <text fg={nameFg} width={nameW}>{row.model.name}</text>
+                <text fg={isActive ? '#7aa2f7' : '#565f89'} width={provW}>{row.model.providerName}</text>
+                <text fg="#9ece6a" width={2}>{isSel ? '✓' : ' '}</text>
+                <text fg="#7dcfff" width={2}>{isActive ? '›' : ' '}</text>
               </box>
             )
           })}
         </box>
 
-        {/* divider line */}
         <box height={1} backgroundColor="#292e42" />
 
         {/* status bar */}
         <box flexDirection="row" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
           <text fg="#bb9af7">Selected: {selected.size} model{selected.size !== 1 ? 's' : ''}</text>
-          {totalPages > 1 && (
-            <text fg="#7dcfff">   Page {page + 1}/{totalPages}</text>
-          )}
-          {page < totalPages - 1 && (
-            <text fg="#565f89">   ↓ more</text>
-          )}
+          {recentCount > 0 && <text fg="#565f89">   [R] recent ({recentCount})</text>}
+          {totalPages > 1 && <text fg="#7dcfff">   Page {page + 1}/{totalPages}</text>}
+          {page < totalPages - 1 && <text fg="#565f89">   ↓ more</text>}
         </box>
       </box>
     </box>

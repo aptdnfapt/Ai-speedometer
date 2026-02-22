@@ -18,7 +18,7 @@ function getHints(screen: Screen, benchResults: import('./context/AppContext.tsx
     case 'model-menu':
       return ['[↑↓] navigate', '[Enter] select', '[q] back']
     case 'model-select':
-      return ['[↑↓] navigate', '[Tab] select', '[Enter] run', '[A] all', '[N] none', '[R] recent', '[q] back']
+      return ['[↑↓] navigate', '[Tab] select', '[Enter] run', '[A] all', '[N] none', '[R] recent', '[Esc] back']
     case 'benchmark': {
       const allDone = benchResults.length > 0 && benchResults.every(r => r.status === 'done' || r.status === 'error')
       return allDone

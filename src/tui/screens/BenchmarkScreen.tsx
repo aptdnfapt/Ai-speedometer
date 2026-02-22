@@ -57,14 +57,26 @@ export function BenchmarkScreen() {
       const promises = models.map(async (model) => {
         try {
           const result: BenchmarkResult = await benchmarkSingleModelRest(model)
-          setModelStates(prev =>
-            prev.map(s =>
-              s.model.id === model.id && s.model.providerId === model.providerId
-                ? { ...s, status: 'done' as const, result }
-                : s
+          if (!result.success) {
+            const errMsg = result.error ?? 'Request failed'
+            setModelStates(prev =>
+              prev.map(s =>
+                s.model.id === model.id && s.model.providerId === model.providerId
+                  ? { ...s, status: 'error' as const, error: errMsg }
+                  : s
+              )
             )
-          )
-          dispatch({ type: 'BENCH_MODEL_DONE', modelId: model.id, result })
+            dispatch({ type: 'BENCH_MODEL_ERROR', modelId: model.id, error: errMsg })
+          } else {
+            setModelStates(prev =>
+              prev.map(s =>
+                s.model.id === model.id && s.model.providerId === model.providerId
+                  ? { ...s, status: 'done' as const, result }
+                  : s
+              )
+            )
+            dispatch({ type: 'BENCH_MODEL_DONE', modelId: model.id, result })
+          }
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err)
           setModelStates(prev =>
