@@ -2,13 +2,10 @@
   "name": "ai-speedometer",
   "version": "2.0.0",
   "description": "A comprehensive CLI tool for benchmarking AI models across multiple providers with parallel execution and professional metrics",
-  "main": "src/index.ts",
   "bin": {
     "ai-speedometer": "dist/ai-speedometer",
     "aispeed": "dist/ai-speedometer"
   },
-  "preferGlobal": true,
-
   "engines": {
     "bun": ">=1.0.0"
   },
@@ -37,7 +34,7 @@
     "parallel",
     "metrics"
   ],
-  "author": "ai-speedometer",
+  "author": "",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -48,13 +45,12 @@
   },
   "homepage": "https://github.com/aptdnfapt/Ai-speedometer#readme",
   "files": [
-    "dist/ai-speedometer",
+    "dist/",
     "docs/",
     "README.md",
     "ai-benchmark-config.json.template"
   ],
-  "dependencies": {
+  "devDependencies": {
     "jsonc-parser": "^3.3.1"
-  },
-  "devDependencies": {}
+  }
 }

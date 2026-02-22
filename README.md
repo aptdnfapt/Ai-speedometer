@@ -6,11 +6,19 @@ A CLI tool for benchmarking AI models across multiple providers with parallel ex
 
 ## Install
 
+Requires [Bun](https://bun.sh) runtime.
+
+```bash
+bun install -g ai-speedometer
+```
+
+Or with npm (Bun still required at runtime):
+
 ```bash
 npm install -g ai-speedometer
 ```
 
-Or run directly from source with Bun:
+Or run directly from source:
 
 ```bash
 bun src/index.ts
