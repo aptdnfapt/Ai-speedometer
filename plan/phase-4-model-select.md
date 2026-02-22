@@ -10,20 +10,20 @@ Goal: the model selection screen fully working — search, pagination, TAB multi
 
 - [ ] Implement `src/tui/screens/ModelSelectScreen.tsx` fully:
 
-  **Layout (column):**
+  **Layout (column) — Tokyo Night styled:**
   ```
-  ┌─ Select Models ────────────────────────────────┐
-  │ Search: query_                                  │
+  ╭─ Select Models ────────────────────────────────╮   borderColor=#292e42, bg=#16161e
+  │ Search: query_                                  │   fg=#7dcfff for "Search:" label
   ├─────────────────────────────────────────────────┤
-  │ -------recent--------                           │
-  │ ● gpt-4o  (openai)                              │
-  │ ○ claude  (anthropic)                           │
-  │ -------recent--------                           │
-  │ ○ glm-4.5  (zai)                                │
+  │  ── recent ──                                   │   separator fg=#565f89
+  │  gpt-4o      openai       bg=#292e42 fg=#7dcfff │   active+selected row
+  │  claude      anthropic    fg=#9ece6a             │   selected (not active)
+  │  ── ────── ──                                   │
+  │  glm-4.5     zai          fg=#565f89             │   unselected dim
   │ ...                                             │
   ├─────────────────────────────────────────────────┤
-  │ Selected: 2 models    Page 1/3                  │
-  └─────────────────────────────────────────────────┘
+  │ Selected: 2 models    Page 1/3                  │   fg=#bb9af7 / fg=#7dcfff
+  ╰─────────────────────────────────────────────────╯
   ```
 
   **State:**
@@ -65,23 +65,22 @@ Goal: the model selection screen fully working — search, pagination, TAB multi
   - printable char → append to search query
   - `Esc` / `q` → navigate to `'model-menu'` (or `'main-menu'` if came from there)
 
-  **Rendering a model row:**
-  ```
-  ● model-name  (provider)     ← current + selected: green filled
-  ○ model-name  (provider)     ← current + not selected: green empty
-  ● model-name  (provider)     ← not current + selected: cyan filled
-  ○ model-name  (provider)     ← not current + not selected: dim empty
-  ```
+  **Rendering a model row (Tokyo Night):**
+  - current + selected → `bg=#292e42` + `fg=#7dcfff` + `›` arrow right
+  - current + not selected → `bg=#292e42` + `fg=#c0caf5` + `›` arrow right
+  - not current + selected → transparent bg + `fg=#9ece6a`
+  - not current + not selected → transparent bg + `fg=#565f89`
+  - NO `●/○` circles — use background highlight + arrow to indicate active row
 
   **Recent section separators:**
-  - show `───── recent ─────` before first recent model
-  - show `───────────────────` after last recent model (before non-recents)
+  - show `── recent ──` before first recent model, fg `#565f89`
+  - show `────────────` after last recent model (before non-recents), fg `#292e42`
   - only when search is empty and recents exist
 
   **Status bar (below list):**
-  - `Selected: N models` in yellow
-  - `Page X/Y` in cyan (only if > 1 page)
-  - `↓ more below` dim hint if not last page
+  - `Selected: N models` in `#bb9af7`
+  - `Page X/Y` in `#7dcfff` (only if > 1 page)
+  - `↓ more below` dim hint `#565f89` if not last page
 
   **Search input:**
   - rendered as: `Search: ` label + `<text fg="bright">{searchQuery}_</text>` (cursor blink via `_`)

@@ -49,7 +49,7 @@ function Shell() {
   })
 
   return (
-    <box flexDirection="column" height="100%" width="100%">
+    <box flexDirection="column" height="100%" width="100%" backgroundColor="#1a1b26">
       <Header />
       <box flexGrow={1} flexDirection="column">
         <ActiveScreen />

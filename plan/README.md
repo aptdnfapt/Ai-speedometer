@@ -19,6 +19,33 @@ Full rewrite of the interactive CLI from `cli.js` (Node.js + raw ANSI) to a prop
 
 ---
 
+## Tokyo Night Theme (all phases)
+
+All colors across every screen, component, and element must use the Tokyo Night palette:
+
+| Token        | Hex       | Usage                                      |
+|--------------|-----------|--------------------------------------------|
+| bg           | `#1a1b26` | root shell background                      |
+| bg-dark      | `#16161e` | header, footer, panels, card backgrounds   |
+| bg-highlight | `#292e42` | active/selected row background             |
+| blue         | `#7aa2f7` | logo, primary accent, headers              |
+| cyan         | `#7dcfff` | Run Benchmark, search cursor, column heads |
+| purple       | `#bb9af7` | Manage Models, step indicators (done)      |
+| red          | `#f7768e` | Exit, errors, ✗ rows                       |
+| green        | `#9ece6a` | ✓ done, success messages                   |
+| orange       | `#ff9e64` | spinner (running state), warnings          |
+| comment      | `#565f89` | dim text, version badge, footer hints      |
+| fg           | `#c0caf5` | normal foreground text                     |
+| border       | `#292e42` | all box borders                            |
+
+Rules:
+- NO hardcoded colors outside this palette
+- `●/○` style indicators replaced with background-highlight rows + `›` arrow
+- No raw ANSI green/yellow/magenta — use hex values above
+- Cards use `borderStyle="rounded"` with `borderColor="#292e42"`
+
+---
+
 ## Key decisions
 
 - **Runtime:** Bun (not Node) — runs TypeScript natively, test runner built in

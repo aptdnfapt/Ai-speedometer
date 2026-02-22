@@ -12,18 +12,18 @@ Goal: all three provider-add screens fully working — Add Verified Provider, Ad
 
   **What it does:** search providers from models.dev → pick one → enter API key → save
 
-  **Layout:**
+  **Layout — Tokyo Night styled:**
   ```
-  ┌─ Add Verified Provider ────────────────────────────┐
-  │ Search: query_                                      │
+  ╭─ Add Verified Provider ────────────────────────────╮  border=#292e42 bg=#16161e
+  │ Search: query_                                      │  "Search:" fg=#7dcfff
   ├─────────────────────────────────────────────────────┤
-  │ ● openai         (openai-compatible)                │
-  │ ○ anthropic      (anthropic)                        │
-  │ ○ google         (google)                           │
+  │  openai         (openai-compatible)   bg=#292e42    │  active row highlight
+  │  anthropic      (anthropic)           fg=#565f89    │  inactive dim
+  │  google         (google)              fg=#565f89    │
   │ ...                                                 │
   ├─────────────────────────────────────────────────────┤
-  │ Page 1/3  [PageUp/PageDown]                         │
-  └─────────────────────────────────────────────────────┘
+  │ Page 1/3  [PageUp/PageDown]           fg=#7dcfff    │
+  ╰─────────────────────────────────────────────────────╯
   ```
 
   **State:**
@@ -110,11 +110,11 @@ Goal: all three provider-add screens fully working — Add Verified Provider, Ad
   - on error → show error, `Enter` to retry or `Esc` to go back
 
   **Step: 'done'**
-  - `<text fg="green">Custom provider added! N models configured.</text>`
+  - `<text fg="#9ece6a">Custom provider added! N models configured.</text>`
   - `Enter` → navigate to `'model-menu'`
 
   **Progress indicator** above form — shows which step: `① Type  ② ID  ③ Name  ④ URL  ⑤ Key  ⑥ Models`
-  - current step highlighted in cyan, done steps in green, future in dim
+  - current step fg `#7dcfff`, done steps fg `#9ece6a`, future steps fg `#565f89`
 
   **Footer hints:** per step context
 
@@ -130,17 +130,17 @@ Goal: all three provider-add screens fully working — Add Verified Provider, Ad
   - `<MenuList>` of custom providers
   - `Enter` → set selected provider → step 2
 
-  **Layout — Step 2: add models**
+  **Layout — Step 2: add models (Tokyo Night):**
   ```
-  ┌─ Add Models to: MyOpenAI ───────────────────────┐
-  │ Current models:                                  │
-  │   • gpt-4                                        │
-  │   • gpt-4-turbo                                  │
-  │                                                  │
-  │ Model name: new-model-name_                      │
-  │                                                  │
-  │ [Enter] add  [empty Enter] done  [Esc] back      │
-  └─────────────────────────────────────────────────┘
+  ╭─ Add Models to: MyOpenAI ───────────────────────╮  border=#292e42 bg=#16161e
+  │ Current models:              fg=#7aa2f7           │
+  │   · gpt-4                    fg=#565f89           │
+  │   · gpt-4-turbo              fg=#565f89           │
+  │                                                   │
+  │ Model name: new-model-name_  fg=#7dcfff           │
+  │                                                   │
+  │ Added 2 models so far        fg=#9ece6a           │
+  ╰─────────────────────────────────────────────────╯
   ```
   - `<input>` focused for model name entry
   - `Enter` with text → `addModelToCustomProvider(provider.id, { name, id })` → append to list → clear input

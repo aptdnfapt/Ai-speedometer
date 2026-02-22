@@ -31,8 +31,8 @@ Goal: comprehensive test suite using `bun test` + `@opentui/react/test-utils`. S
 
 - [ ] `src/tests/components/MenuList.test.tsx`:
   - `renders all items` → each label appears in frame
-  - `highlights selected item with filled circle ●`
-  - `non-selected items show empty circle ○`
+  - `highlights selected item with bg-highlight row and › arrow`
+  - `non-selected items render in comment color #565f89`
   - `snapshot: MenuList 3 items selected=0`
   - `snapshot: MenuList 3 items selected=2`
 
@@ -44,9 +44,9 @@ Goal: comprehensive test suite using `bun test` + `@opentui/react/test-utils`. S
   - snapshot: `BarChart 50% width=20`
 
 - [ ] `src/tests/components/ModelRow.test.tsx`:
-  - `shows spinner char when status=running` → one of `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` present
-  - `shows ○ when status=pending` → `○` present, no spinner
-  - `shows ● and ✓ when status=done` → both chars present in frame
+  - `shows spinner char when status=running` → one of `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` present, fg #ff9e64
+  - `shows · when status=pending` → `·` present in #565f89, no spinner
+  - `shows ● and ✓ when status=done` → both chars present, ✓ in #9ece6a
   - `shows rank number when done` → `1` visible in frame for rank=1
   - `shows ✗ when status=error` → error row renders
   - `shows TPS bar when done` → `█` chars present in frame
@@ -70,8 +70,9 @@ Goal: comprehensive test suite using `bun test` + `@opentui/react/test-utils`. S
 ### Screen tests
 
 - [ ] `src/tests/screens/MainMenuScreen.test.tsx`:
-  - `renders 3 menu items` → Run Benchmark, Set Model, Exit all present
-  - `first item highlighted by default`
+  - `renders 3 menu items` → ⚡ Run Benchmark, ⚙ Manage Models, ✕ Exit all present
+  - `first item has bg-highlight row (bg=#292e42)`
+  - `first item shows › arrow`
   - snapshot: `MainMenuScreen initial state`
 
 - [ ] `src/tests/screens/ModelSelectScreen.test.tsx`:

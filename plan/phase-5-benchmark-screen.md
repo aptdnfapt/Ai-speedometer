@@ -10,11 +10,12 @@ Goal: the live benchmark screen — all models spin simultaneously, each snaps i
 
 - [ ] Create `src/tui/components/BarChart.tsx`:
   - props: `{ value: number; max: number; width: number; color: string }`
-  - filled cells: `Math.round((value / max) * width)` using `█`
-  - empty cells: `░`
+  - filled cells: `Math.round((value / max) * width)` using `█` in passed `color`
+  - empty cells: `░` in `#292e42`
   - renders as single `<text>` line
   - if `max === 0` → all empty bars
   - exported type: `BarChartProps`
+  - TPS bar color: `#7dcfff`, TIME bar color: `#bb9af7`
 
 - [ ] Create `src/tui/components/ModelRow.tsx`:
   - props:
@@ -29,42 +30,38 @@ Goal: the live benchmark screen — all models spin simultaneously, each snaps i
       maxTime: number        // for bar scaling
     }
     ```
-  - **pending row:**
+  - **pending row:** fg `#565f89`
     ```
-    ○  model-name  (provider)  --
+    ·  model-name  (provider)  --
     ```
-  - **running row:**
+  - **running row:** spinner fg `#ff9e64`, model name fg `#c0caf5`, elapsed fg `#565f89`
     ```
     ⠹  model-name  (provider)  1.2s...
     ```
     spinner char: `SPINNER_FRAMES[spinnerFrame % 10]` where `SPINNER_FRAMES = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']`
     elapsed time shown: `Date.now() - startedAt` formatted as `Xs...`
-    spinner char color: yellow
-  - **done row:**
+  - **done row:** rank 1 fg `#7dcfff`, rank 2 fg `#bb9af7`, rank 3+ fg `#565f89`; `✓` fg `#9ece6a`
     ```
     ●  1  model-name  (provider)  ✓
-         TPS  █████████████████░░░░░░  87.3 tok/s
-         TIME ████████████░░░░░░░░░░░  2.14s
+         TPS  █████████████████░░░░░░  87.3 tok/s    bar color #7dcfff
+         TIME ████████████░░░░░░░░░░░  2.14s          bar color #bb9af7
     ```
-    rank number in yellow/white/dim depending on 1st/2nd/3rd+
-    `✓` in green
     two `<BarChart>` lines below, indented
-  - **error row:**
+  - **error row:** fg `#f7768e`
     ```
     ✗  model-name  (provider)  ERROR: message
     ```
-    red color
 
 - [ ] Create `src/tui/components/ResultsTable.tsx`:
   - props: `{ results: BenchmarkResult[]; pendingCount: number }`
   - renders a header row + one row per result
   - columns: `#`, `Model`, `Provider`, `Time(s)`, `TTFT(s)`, `Tok/s`, `Out`, `In`, `Total`
   - each column fixed width (pad/truncate) using `.padEnd()` / `.padStart()`
-  - header row: cyan foreground, `─` separator line below
-  - data rows sorted by `tokensPerSecond` descending (same sort as leaderboard)
-  - pending rows: show `--` for all numeric columns
-  - if `pendingCount > 0`: show dim footer row `Waiting for {pendingCount} more...`
-  - `[est]` suffix on token counts where `usedEstimateForOutput` or `usedEstimateForInput` is true
+  - header row: fg `#7dcfff`, `─` separator line fg `#292e42` below
+  - data rows sorted by `tokensPerSecond` descending
+  - pending rows: `--` in `#565f89`
+  - if `pendingCount > 0`: dim footer `Waiting for {pendingCount} more...` in `#565f89`
+  - `[est]` suffix in `#ff9e64` on estimated token counts
   - renders inside `<scrollbox>` if rows overflow
 
 ### BenchmarkScreen
@@ -131,8 +128,8 @@ Goal: the live benchmark screen — all models spin simultaneously, each snaps i
   - `q` / `Enter` when `allDone` → navigate to `'main-menu'` + dispatch `BENCH_RESET`
 
   **Status line above leaderboard:**
-  - `{running.length} running · {done.length} done · {errors.length} errors`
-  - when all done: `All done! [Enter] to return` in green
+  - `{running.length} running` fg `#ff9e64` · `{done.length} done` fg `#9ece6a` · `{errors.length} errors` fg `#f7768e`
+  - when all done: `All done! [Enter] to return` fg `#9ece6a`
 
 - [ ] Footer hints:
   - while running: `['Benchmark in progress...']`

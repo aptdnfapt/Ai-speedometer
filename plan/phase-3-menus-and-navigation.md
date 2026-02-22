@@ -19,7 +19,7 @@ Goal: all menu screens fully implemented and navigable. No benchmark or provider
     }
     ```
   - `useKeyboard` inside: `↑` → selectedIndex-1 (circular), `↓` → +1, `Enter` → `onSelect`
-  - each row: `● label  description` when selected (green), `○ label  description` when not (dim)
+  - each row: selected = `bg-highlight #292e42` background + item color fg + `›` arrow; unselected = transparent bg + `#565f89` fg
   - no scrollbox needed — menus are short (max 6 items)
   - `useState(selectedIndex)` for local cursor — calls `onNavigate` on change, `onSelect` on enter
 
@@ -33,7 +33,8 @@ Goal: all menu screens fully implemented and navigable. No benchmark or provider
   - uses `<MenuList>` with local `useState(0)` for cursor
   - `useNavigate()` from context for navigation
   - `useRenderer()` for destroy on Exit
-  - title: `<text fg="#FF00FF">Main Menu</text>`
+  - centered layout: items in a rounded card `borderColor="#292e42"` `backgroundColor="#16161e"` centered on screen
+  - each item has label + description line; active item uses item-specific Tokyo Night accent color + `#292e42` bg row
 
 ### ModelMenuScreen
 
@@ -45,7 +46,7 @@ Goal: all menu screens fully implemented and navigable. No benchmark or provider
     4. `List Providers` → navigate to `'list-providers'`
     5. `Back` → navigate to `'main-menu'`
   - uses `<MenuList>`
-  - title: `<text fg="#FF00FF">Model Management</text>`
+  - title: `<text fg="#7aa2f7">Model Management</text>`
   - `Esc` / `q` → back to main-menu (via `useKeyboard`)
 
 ### ListProvidersScreen
@@ -58,7 +59,7 @@ Goal: all menu screens fully implemented and navigable. No benchmark or provider
     - models listed below each provider indented
   - `q` / `Esc` → back to `'model-menu'`
   - loading state: if `isLoadingConfig` → `<text>Loading providers...</text>`
-  - empty state: `<text fg="yellow">No providers configured yet.</text>`
+  - empty state: `<text fg="#ff9e64">No providers configured yet.</text>`
 
 ### Footer hints per screen (update App.tsx getHints)
 
@@ -69,7 +70,7 @@ Goal: all menu screens fully implemented and navigable. No benchmark or provider
 
 ### Verification
 
-- [ ] `bun src/index.ts` → Main Menu shows 3 items with ● / ○ indicators
+- [ ] `bun src/index.ts` → Main Menu shows 3 items centered on screen with Tokyo Night card style
 - [ ] Arrow keys cycle through menu items
 - [ ] Enter on "Set Model" → Model Management screen appears
 - [ ] Enter on "List Providers" → provider list (or empty state)
