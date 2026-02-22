@@ -2004,7 +2004,7 @@ async function benchmarkSingleModelRest(model) {
       const finalOutputTokens = outputTokens || Math.round(streamedText.length / 4);
       const finalInputTokens = inputTokens || Math.round(testPrompt.length / 4);
       const totalTokens = finalInputTokens + finalOutputTokens;
-      const tokensPerSecond = totalTime > 0 ? (totalTokens / totalTime) * 1000 : 0;
+      const tokensPerSecond = totalTime > 0 ? (finalOutputTokens / totalTime) * 1000 : 0;
       
       return {
         model: model.name,
