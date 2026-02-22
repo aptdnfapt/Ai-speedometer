@@ -101,6 +101,107 @@ export const readOpencodeConfig = async (): Promise<{ provider: Record<string, u
   return { provider: {} }
 }
 
+interface OpencodeProviderOptions {
+  apiKey?: string
+  baseURL?: string
+  [key: string]: unknown
+}
+
+interface OpencodeProviderEntry {
+  name?: string
+  npm?: string
+  api?: string
+  env?: string[]
+  options?: OpencodeProviderOptions
+  models?: Record<string, { id?: string; name?: string }>
+}
+
+interface OpencodeGlobalConfig {
+  provider?: Record<string, OpencodeProviderEntry>
+  [key: string]: unknown
+}
+
+const readOpencodeGlobalConfig = (): OpencodeGlobalConfig => {
+  const configDir = path.join(
+    process.env.XDG_CONFIG_HOME || path.join(homedir(), '.config'),
+    'opencode'
+  )
+  // opencode reads both config.json and opencode.json, merging them
+  const candidates = ['config.json', 'opencode.json', 'opencode.jsonc']
+  let merged: OpencodeGlobalConfig = {}
+
+  for (const filename of candidates) {
+    const filePath = path.join(configDir, filename)
+    try {
+      if (!fs.existsSync(filePath)) continue
+      const text = fs.readFileSync(filePath, 'utf8')
+      const errors: ParseError[] = []
+      const parsed = parseJsonc(text, errors, { allowTrailingComma: true }) as OpencodeGlobalConfig
+      if (parsed && typeof parsed === 'object') {
+        // merge provider maps, later files win per-provider
+        merged = {
+          ...merged,
+          ...parsed,
+          provider: { ...(merged.provider ?? {}), ...(parsed.provider ?? {}) }
+        }
+      }
+    } catch {
+      // silently skip unreadable files
+    }
+  }
+
+  return merged
+}
+
+export const getOpencodeGlobalConfigProviders = async (): Promise<Provider[]> => {
+  try {
+    const globalConfig = readOpencodeGlobalConfig()
+    if (!globalConfig.provider || Object.keys(globalConfig.provider).length === 0) return []
+
+    const allModelsDevProviders = await getAllProviders()
+    const result: Provider[] = []
+
+    for (const [providerId, entry] of Object.entries(globalConfig.provider)) {
+      const apiKey = entry.options?.apiKey
+      if (!apiKey) continue // only surface providers where an apiKey is explicitly set
+
+      // look up this provider in models.dev to get baseUrl, type, and model list
+      const mdProvider = allModelsDevProviders.find(p => p.id === providerId)
+
+      // resolve models: inline models from config take precedence, fall back to models.dev
+      let models: Array<{ id: string; name: string }> = []
+      if (entry.models && Object.keys(entry.models).length > 0) {
+        models = Object.entries(entry.models).map(([modelKey, m]) => ({
+          id: `${providerId}_${m.id ?? modelKey}`,
+          name: m.name ?? m.id ?? modelKey
+        }))
+      } else if (mdProvider) {
+        models = mdProvider.models.map(m => ({ id: `${providerId}_${m.id}`, name: m.name }))
+      }
+
+      // resolve type: npm field hint → anthropic or openai-compatible
+      const npm = entry.npm ?? mdProvider?.type
+      const type: Provider['type'] = npm?.includes('anthropic')
+        ? 'anthropic'
+        : (mdProvider?.type as Provider['type']) ?? 'openai-compatible'
+
+      result.push({
+        id: providerId,
+        name: entry.name ?? mdProvider?.name ?? providerId,
+        type,
+        baseUrl: entry.options?.baseURL ?? entry.api ?? mdProvider?.baseUrl ?? '',
+        apiKey,
+        models
+      })
+    }
+
+    return result
+  } catch (error) {
+    console.warn('Warning: Could not load opencode global config providers:', (error as Error).message)
+    return []
+  }
+}
+
 export const getAuthenticatedProviders = async (): Promise<Provider[]> => {
   const authData = await readAuthJson()
   const allProviders = await getAllProviders()
@@ -152,7 +253,7 @@ export const removeApiKey = async (providerId: string): Promise<boolean> => {
 }
 
 export const getAllAvailableProviders = async (includeAllProviders = false): Promise<Provider[]> => {
-  const [authenticatedProviders, customProvidersFromConfig, customVerifiedProviders] = await Promise.all([
+  const [authenticatedProviders, customProvidersFromConfig, customVerifiedProviders, opencodeGlobalProviders] = await Promise.all([
     getAuthenticatedProviders(),
     (async () => {
       try {
@@ -169,12 +270,15 @@ export const getAllAvailableProviders = async (includeAllProviders = false): Pro
         console.warn('Warning: Could not load custom verified providers:', (error as Error).message)
         return []
       }
-    })()
+    })(),
+    getOpencodeGlobalConfigProviders()
   ])
 
   const providerMap = new Map<string, Provider>()
 
+  // priority (lowest → highest): bundled → opencode global config → our config → auth.json
   customVerifiedProviders.forEach(p => providerMap.set(p.id, p as unknown as Provider))
+  opencodeGlobalProviders.forEach(p => providerMap.set(p.id, p))
   customProvidersFromConfig.forEach(p => providerMap.set(p.id, p))
   authenticatedProviders.forEach(p => providerMap.set(p.id, p))
 
