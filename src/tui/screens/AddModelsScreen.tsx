@@ -26,7 +26,7 @@ export function AddModelsScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const { getCustomProvidersFromConfig } = await import('../../../ai-config.js')
+        const { getCustomProvidersFromConfig } = await import('../../ai-config.ts')
         const provs = await getCustomProvidersFromConfig()
         setProviders(provs)
       } catch (e) {
@@ -93,7 +93,7 @@ export function AddModelsScreen() {
     setSaveError('')
     const name = modelInput.trim()
     try {
-      const { addModelToCustomProvider } = await import('../../../ai-config.js')
+      const { addModelToCustomProvider } = await import('../../ai-config.ts')
       await addModelToCustomProvider(selectedProvider.id, {
         id: name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
         name,
@@ -106,7 +106,7 @@ export function AddModelsScreen() {
   }
 
   async function finishAdding() {
-    const { getAllAvailableProviders } = await import('../../../opencode-integration.js')
+    const { getAllAvailableProviders } = await import('../../opencode-integration.ts')
     const provs = await getAllAvailableProviders(false)
     dispatch({ type: 'SET_CONFIG', config: { providers: provs } })
     setDone(true)

@@ -107,7 +107,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false
     async function loadConfig() {
       try {
-        const { getAllAvailableProviders } = await import('../../../opencode-integration.js')
+        const { getAllAvailableProviders } = await import('../../opencode-integration.ts')
         const providers = await getAllAvailableProviders(false)
         if (!cancelled) {
           dispatch({ type: 'SET_CONFIG', config: { providers } })

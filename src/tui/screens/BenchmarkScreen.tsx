@@ -52,7 +52,7 @@ export function BenchmarkScreen() {
     )
 
     async function runAll() {
-      const { benchmarkSingleModelRest } = await import('../../benchmark.js')
+      const { benchmarkSingleModelRest } = await import('../../benchmark.ts')
 
       const promises = models.map(async (model) => {
         try {
@@ -96,7 +96,7 @@ export function BenchmarkScreen() {
       setAllDone(true)
 
       try {
-        const { addToRecentModels } = await import('../../../ai-config.js')
+        const { addToRecentModels } = await import('../../ai-config.ts')
         await addToRecentModels(models.map(m => ({ modelId: m.id, modelName: m.name, providerName: m.providerName })))
       } catch { /* silent */ }
     }

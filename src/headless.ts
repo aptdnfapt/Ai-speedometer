@@ -1,4 +1,4 @@
-import { getAllAvailableProviders } from '../opencode-integration.js'
+import { getAllAvailableProviders } from './opencode-integration.ts'
 import { benchmarkSingleModelRest } from './benchmark.ts'
 import type { CliArgs, Model, Provider } from './types.ts'
 

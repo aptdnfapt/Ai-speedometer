@@ -1,4 +1,4 @@
-import { testPrompt } from '../test-prompt.js'
+import { TEST_PROMPT as testPrompt } from './constants.ts'
 import type { Model, BenchmarkResult } from './types.ts'
 
 export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkResult> {

@@ -49,7 +49,7 @@ export function ModelSelectScreen() {
 
     async function loadRecents() {
       try {
-        const { getRecentModels, cleanupRecentModelsFromConfig } = await import('../../../ai-config.js')
+        const { getRecentModels, cleanupRecentModelsFromConfig } = await import('../../ai-config.ts')
         await cleanupRecentModelsFromConfig()
         const recents: Array<{ modelId: string; providerName?: string }> = await getRecentModels()
         const keys = new Set<string>()

@@ -1,0 +1,288 @@
+import fs from 'fs'
+import path from 'path'
+import { homedir } from 'os'
+import { getAllProviders, getModelsForProvider, loadCustomVerifiedProviders } from './models-dev.ts'
+import { getCustomProvidersFromConfig } from './ai-config.ts'
+import { parse as parseJsonc, type ParseError } from 'jsonc-parser'
+import type { Provider } from './types.ts'
+
+interface XDGPaths {
+  data: string
+  config: string
+}
+
+interface FilePaths {
+  authJson: string
+  opencodeJson: string
+}
+
+interface AuthEntry {
+  type: string
+  key?: string
+}
+
+type AuthData = Record<string, AuthEntry>
+
+interface MigrationResult {
+  migrated: number
+  failed: number
+  errors: string[]
+}
+
+interface DebugInfo {
+  opencodePaths: FilePaths
+  authExists: boolean
+  configExists: boolean
+  authData: string[]
+  configProviders: string[]
+  aiConfigPaths: { configJson: string; configDir: string; configExists: boolean }
+  aiConfigData: { verifiedProviders: string[]; customProviders: string[] }
+  xdgPaths: XDGPaths
+}
+
+const getXDGPaths = (): XDGPaths => ({
+  data: path.join(process.env.XDG_DATA_HOME || path.join(homedir(), '.local', 'share'), 'opencode'),
+  config: path.join(process.env.XDG_CONFIG_HOME || path.join(homedir(), '.config'), 'opencode')
+})
+
+const getFilePaths = (): FilePaths => {
+  const paths = getXDGPaths()
+  return {
+    authJson: path.join(paths.data, 'auth.json'),
+    opencodeJson: path.join(paths.config, 'opencode.json')
+  }
+}
+
+const ensureDirectories = (): void => {
+  const paths = getXDGPaths()
+  ;[paths.data, paths.config].forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  })
+}
+
+export const readAuthJson = async (): Promise<AuthData> => {
+  const { authJson } = getFilePaths()
+  try {
+    if (!fs.existsSync(authJson)) return {}
+    const data = fs.readFileSync(authJson, 'utf8')
+    const errors: ParseError[] = []
+    const parsed = parseJsonc(data, errors, { allowTrailingComma: true }) as AuthData
+    if (errors.length > 0) {
+      console.warn('Warning: JSONC parsing errors in auth.json')
+      return parsed || {}
+    }
+    return parsed
+  } catch (error) {
+    console.warn('Warning: Could not read auth.json:', (error as Error).message)
+    return {}
+  }
+}
+
+export const writeAuthJson = async (authData: AuthData): Promise<boolean> => {
+  const { authJson } = getFilePaths()
+  try {
+    ensureDirectories()
+    fs.writeFileSync(authJson, JSON.stringify(authData, null, 2))
+    fs.chmodSync(authJson, 0o600)
+    return true
+  } catch (error) {
+    console.error('Error writing auth.json:', (error as Error).message)
+    return false
+  }
+}
+
+export const writeOpencodeConfig = async (): Promise<false> => {
+  console.warn('Warning: opencode.json is no longer used. Use ai-benchmark-config.json instead.')
+  return false
+}
+
+export const readOpencodeConfig = async (): Promise<{ provider: Record<string, unknown> }> => {
+  console.warn('Warning: opencode.json is no longer used. Use ai-benchmark-config.json instead.')
+  return { provider: {} }
+}
+
+export const getAuthenticatedProviders = async (): Promise<Provider[]> => {
+  const authData = await readAuthJson()
+  const allProviders = await getAllProviders()
+  const authenticatedProviders: Provider[] = []
+
+  for (const [providerId, authInfo] of Object.entries(authData)) {
+    const providerInfo = allProviders.find(p => p.id === providerId)
+    if (providerInfo && authInfo.type === 'api' && authInfo.key) {
+      const models = await getModelsForProvider(providerId)
+      authenticatedProviders.push({
+        id: providerId,
+        name: providerInfo.name,
+        type: providerInfo.type as Provider['type'],
+        baseUrl: providerInfo.baseUrl,
+        apiKey: authInfo.key,
+        models: models.map(model => ({ name: model.name, id: `${providerId}_${model.id}` }))
+      })
+    }
+  }
+
+  return authenticatedProviders
+}
+
+export const getCustomProviders = async (): Promise<Provider[]> => []
+
+export const verifyProvider = async (providerId: string) => {
+  try {
+    const allProviders = await getAllProviders()
+    return allProviders.find(p => p.id === providerId) ?? null
+  } catch (error) {
+    console.warn('Warning: Could not verify provider:', (error as Error).message)
+    return null
+  }
+}
+
+export const addApiKey = async (providerId: string, apiKey: string): Promise<boolean> => {
+  const authData = await readAuthJson()
+  authData[providerId] = { type: 'api', key: apiKey }
+  return writeAuthJson(authData)
+}
+
+export const removeApiKey = async (providerId: string): Promise<boolean> => {
+  const authData = await readAuthJson()
+  if (authData[providerId]) {
+    delete authData[providerId]
+    return writeAuthJson(authData)
+  }
+  return true
+}
+
+export const getAllAvailableProviders = async (includeAllProviders = false): Promise<Provider[]> => {
+  const [authenticatedProviders, customProvidersFromConfig, customVerifiedProviders] = await Promise.all([
+    getAuthenticatedProviders(),
+    (async () => {
+      try {
+        return await getCustomProvidersFromConfig()
+      } catch (error) {
+        console.warn('Warning: Could not load custom providers:', (error as Error).message)
+        return []
+      }
+    })(),
+    (async () => {
+      try {
+        return loadCustomVerifiedProviders()
+      } catch (error) {
+        console.warn('Warning: Could not load custom verified providers:', (error as Error).message)
+        return []
+      }
+    })()
+  ])
+
+  const providerMap = new Map<string, Provider>()
+
+  customVerifiedProviders.forEach(p => providerMap.set(p.id, p as unknown as Provider))
+  customProvidersFromConfig.forEach(p => providerMap.set(p.id, p))
+  authenticatedProviders.forEach(p => providerMap.set(p.id, p))
+
+  if (includeAllProviders) {
+    try {
+      const allModelsDevProviders = await getAllProviders()
+      const authenticatedIds = new Set(authenticatedProviders.map(p => p.id))
+      const customIds = new Set(customProvidersFromConfig.map(p => p.id))
+      const customVerifiedIds = new Set(customVerifiedProviders.map(p => p.id))
+
+      allModelsDevProviders.forEach(provider => {
+        if (!authenticatedIds.has(provider.id) && !customIds.has(provider.id) && !customVerifiedIds.has(provider.id)) {
+          providerMap.set(provider.id, {
+            ...provider,
+            type: provider.type as Provider['type'],
+            apiKey: '',
+            models: provider.models.map(m => ({ ...m, id: `${provider.id}_${m.id}` }))
+          })
+        }
+      })
+    } catch (error) {
+      console.warn('Warning: Could not load all models.dev providers:', (error as Error).message)
+    }
+  }
+
+  return Array.from(providerMap.values())
+}
+
+export const isProviderAuthenticated = async (providerId: string): Promise<boolean> => {
+  const authData = await readAuthJson()
+  return authData[providerId]?.type === 'api'
+}
+
+export const getProviderAuth = async (providerId: string): Promise<AuthEntry | null> => {
+  const authData = await readAuthJson()
+  return authData[providerId] ?? null
+}
+
+export const migrateFromOldConfig = async (oldConfig: {
+  verifiedProviders?: Record<string, string>
+  customProviders?: Provider[]
+}): Promise<MigrationResult> => {
+  const results: MigrationResult = { migrated: 0, failed: 0, errors: [] }
+
+  try {
+    if (oldConfig.verifiedProviders) {
+      for (const [providerId, apiKey] of Object.entries(oldConfig.verifiedProviders)) {
+        const providerInfo = await verifyProvider(providerId)
+        if (providerInfo) {
+          const success = await addApiKey(providerId, apiKey)
+          if (success) results.migrated++
+          else { results.failed++; results.errors.push(`Failed to migrate ${providerId}`) }
+        } else {
+          results.failed++
+          results.errors.push(`Provider ${providerId} not found in models.dev`)
+        }
+      }
+    }
+
+    if (oldConfig.customProviders && oldConfig.customProviders.length > 0) {
+      try {
+        const { readAIConfig, writeAIConfig } = await import('./ai-config.ts')
+        const config = await readAIConfig()
+        for (const provider of oldConfig.customProviders) {
+          config.customProviders = config.customProviders || []
+          config.customProviders.push({
+            id: provider.id,
+            name: provider.name,
+            type: provider.type,
+            baseUrl: provider.baseUrl,
+            apiKey: provider.apiKey,
+            models: provider.models || []
+          })
+          results.migrated++
+        }
+        await writeAIConfig(config)
+      } catch (error) {
+        results.failed++
+        results.errors.push(`Failed to migrate custom providers: ${(error as Error).message}`)
+      }
+    }
+
+    return results
+  } catch (error) {
+    results.failed++
+    results.errors.push(`Migration failed: ${(error as Error).message}`)
+    return results
+  }
+}
+
+export const getDebugInfo = async (): Promise<DebugInfo> => {
+  const opencodePaths = getFilePaths()
+  const { getAIConfigDebugPaths, readAIConfig } = await import('./ai-config.ts')
+  const aiConfigPaths = getAIConfigDebugPaths()
+  const authData = await readAuthJson()
+  const aiConfigData = await readAIConfig()
+
+  return {
+    opencodePaths,
+    authExists: fs.existsSync(opencodePaths.authJson),
+    configExists: fs.existsSync(opencodePaths.opencodeJson),
+    authData: Object.keys(authData),
+    configProviders: [],
+    aiConfigPaths,
+    aiConfigData: {
+      verifiedProviders: Object.keys(aiConfigData.verifiedProviders || {}),
+      customProviders: (aiConfigData.customProviders || []).map(p => p.id)
+    },
+    xdgPaths: getXDGPaths()
+  }
+}

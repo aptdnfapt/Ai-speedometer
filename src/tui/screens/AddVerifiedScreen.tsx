@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
-import type { ProviderInfo } from '../../../models-dev.js'
+import type { ProviderInfo } from '../../models-dev.ts'
 
 type Step = 'browse' | 'confirm'
 
@@ -29,7 +29,7 @@ export function AddVerifiedScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const { getAllProviders } = await import('../../../models-dev.js')
+        const { getAllProviders } = await import('../../models-dev.ts')
         const providers = await getAllProviders()
         setAllProviders(providers)
         setFiltered(providers)
@@ -61,11 +61,11 @@ export function AddVerifiedScreen() {
     setSaving(true)
     setSaveError('')
     try {
-      const { addApiKey } = await import('../../../opencode-integration.js')
-      const { addVerifiedProvider, getVerifiedProvidersFromConfig } = await import('../../../ai-config.js')
+      const { addApiKey } = await import('../../opencode-integration.ts')
+      const { addVerifiedProvider, getVerifiedProvidersFromConfig } = await import('../../ai-config.ts')
       await addApiKey(selectedProvider.id, apiKey.trim())
       await addVerifiedProvider(selectedProvider.id, apiKey.trim())
-      const { getAllAvailableProviders } = await import('../../../opencode-integration.js')
+      const { getAllAvailableProviders } = await import('../../opencode-integration.ts')
       const providers = await getAllAvailableProviders(false)
       dispatch({ type: 'SET_CONFIG', config: { providers } })
       setSaveSuccess(true)
