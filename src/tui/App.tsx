@@ -11,7 +11,7 @@ import { AddCustomScreen } from './screens/AddCustomScreen.tsx'
 import { AddModelsScreen } from './screens/AddModelsScreen.tsx'
 import { ListProvidersScreen } from './screens/ListProvidersScreen.tsx'
 
-function getHints(screen: Screen): string[] {
+function getHints(screen: Screen, benchResults: import('./context/AppContext.tsx').AppState['benchResults']): string[] {
   switch (screen) {
     case 'main-menu':
       return ['[↑↓] navigate', '[Enter] select', '[Ctrl+C] quit']
@@ -19,6 +19,12 @@ function getHints(screen: Screen): string[] {
       return ['[↑↓] navigate', '[Enter] select', '[q] back']
     case 'model-select':
       return ['[↑↓] navigate', '[Tab] select', '[Enter] run', '[A] all', '[N] none', '[R] recent', '[q] back']
+    case 'benchmark': {
+      const allDone = benchResults.length > 0 && benchResults.every(r => r.status === 'done' || r.status === 'error')
+      return allDone
+        ? ['[Enter] back to menu', '[q] back to menu']
+        : ['Benchmark in progress...']
+    }
     case 'list-providers':
       return ['[↑↓] scroll', '[q] back']
     default:
@@ -56,7 +62,7 @@ function Shell() {
       <box flexGrow={1} flexDirection="column">
         <ActiveScreen />
       </box>
-      <Footer hints={getHints(state.screen)} />
+      <Footer hints={getHints(state.screen, state.benchResults)} />
     </box>
   )
 }
