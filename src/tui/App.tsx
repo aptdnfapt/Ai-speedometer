@@ -27,6 +27,12 @@ function getHints(screen: Screen, benchResults: import('./context/AppContext.tsx
     }
     case 'list-providers':
       return ['[↑↓] scroll', '[q] back']
+    case 'add-verified':
+      return ['[↑↓] navigate', '[Enter] select', '[q] back']
+    case 'add-custom':
+      return ['[↑↓] navigate', '[Enter] confirm', '[Esc] back']
+    case 'add-models':
+      return ['[↑↓] navigate', '[Enter] add / finish', '[Esc] back']
     default:
       return ['[q] back']
   }
@@ -58,7 +64,7 @@ function Shell() {
 
   return (
     <box flexDirection="column" height="100%" width="100%" backgroundColor="#1a1b26">
-      <Header />
+      <Header screen={state.screen} />
       <box flexGrow={1} flexDirection="column">
         <ActiveScreen />
       </box>

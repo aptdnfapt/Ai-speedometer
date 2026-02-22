@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRenderer } from '@opentui/react'
 import { useKeyboard } from '@opentui/react'
 import { useNavigate } from '../context/AppContext.tsx'
+import pkg from '../../../package.json'
 
 const ITEMS = [
   { label: '⚡ Run Benchmark',  desc: 'test model speed & throughput',  color: '#7dcfff' },
@@ -28,6 +29,10 @@ export function MainMenuScreen() {
 
   return (
     <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
+      <box flexDirection="column" alignItems="center" marginBottom={2}>
+        <ascii-font text="AI-SPEEDOMETER" font="tiny" color="#7aa2f7" />
+        <text fg="#565f89">v{pkg.version}</text>
+      </box>
       <box
         flexDirection="column"
         border

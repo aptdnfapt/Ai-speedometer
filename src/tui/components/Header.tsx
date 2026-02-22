@@ -1,14 +1,17 @@
 import pkg from '../../../package.json'
+import type { Screen } from '../context/AppContext.tsx'
 
-export function Header() {
+interface HeaderProps {
+  screen: Screen
+}
+
+export function Header({ screen }: HeaderProps) {
+  if (screen === 'main-menu') return null
   return (
-    <box flexDirection="column" alignItems="center" justifyContent="center" width="100%" height={4} backgroundColor="#16161e">
-      <box flexDirection="row" alignItems="center">
-        <ascii-font text="AI-SPEEDOMETER" font="tiny" color="#7aa2f7" />
-        <box marginLeft={2}>
-          <text fg="#565f89">v{pkg.version}</text>
-        </box>
-      </box>
+    <box height={1} flexDirection="row" alignItems="center" paddingLeft={2} backgroundColor="#16161e">
+      <text fg="#7aa2f7">AI-SPEEDOMETER</text>
+      <text fg="#292e42">  ·  </text>
+      <text fg="#565f89">v{pkg.version}</text>
     </box>
   )
 }
