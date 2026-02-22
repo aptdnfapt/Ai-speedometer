@@ -10,30 +10,38 @@ A CLI tool for benchmarking AI models across multiple providers with parallel ex
 npm install -g ai-speedometer
 ```
 
+Or run directly from source with Bun:
+
+```bash
+bun src/index.ts
+```
+
 ## What It Measures
 
 - **TTFT** (Time to First Token) - How fast the first response token arrives
-- **Total Time** - Complete request duration  
+- **Total Time** - Complete request duration
 - **Tokens/Second** - Real-time throughput
 - **Token Counts** - Input, output, and total tokens used
 
-## New Features
+## Features
 
-- **REST API Default** - REST API benchmarking is now the default method for better compatibility
+- **Interactive TUI** - Full terminal UI with Tokyo Night theme, menus, search, and live benchmark progress
+- **REST API Benchmarking** - Default method, works with all OpenAI-compatible providers
 - **Headless Mode** - Run benchmarks without interactive CLI using command-line arguments
-- **Streaming Support** - Full streaming support now available in REST API benchmarks
+- **Parallel Execution** - Benchmark multiple models simultaneously
+- **Provider Management** - Add verified, custom verified, and custom providers
 
 ## Quick Setup
 
 1. **Set Model**
    ```bash
    ai-speedometer
-   # Select "Set Model" → "Add Verified Provider" → Choose provider (OpenAI, Anthropic, etc.)
+   # Select "Run Benchmark" → "Add Verified Provider" → Choose provider (OpenAI, Anthropic, etc.)
    # Enter your API key when prompted
    ```
 
 2. **Choose Model Provider**
-    - Verified providers (OpenAI, Anthropic, Google) - auto-configured
+    - Verified providers (OpenAI, Anthropic, Google) - auto-configured via models.dev
     - Custom verified providers (pre-configured trusted providers) - add API key
     - Custom providers (Ollama, local models) - add your base URL
 
@@ -42,47 +50,64 @@ npm install -g ai-speedometer
    - Enter when prompted - stored securely in:
      - `~/.local/share/opencode/auth.json` (primary storage)
      - `~/.config/ai-speedometer/ai-benchmark-config.json` (backup storage)
-     - Both files store verified and custom verified provider keys
 
 4. **Run Benchmark**
    ```bash
    ai-speedometer
-   # Select "Run Benchmark (REST API)" → Choose models → Press ENTER
-   # Note: REST API is now the default benchmark method
+   # Select "Run Benchmark" → choose models → press Enter
    ```
 
 ## Usage
 
 ```bash
-# Start CLI
+# Start interactive TUI
 ai-speedometer
 
-# Or use short alias  
+# Short alias
 aispeed
 
 # Debug mode
 ai-speedometer --debug
 
-# Headless mode - run benchmark directly
+# Headless benchmark
 ai-speedometer --bench openai:gpt-4
 # With custom API key
 ai-speedometer --bench openai:gpt-4 --api-key "sk-your-key"
-# Use AI SDK instead of REST API
-ai-speedometer --bench openai:gpt-4 --ai-sdk
+# Custom provider
+ai-speedometer --bench-custom myprovider:mymodel --base-url https://... --api-key "..."
+```
+
+## Development
+
+```bash
+# Run from source
+bun src/index.ts
+
+# Run with auto-reload
+bun --watch src/index.ts
+
+# Run tests
+bun test
+
+# Typecheck
+bun run typecheck
+
+# Build standalone binary
+bun run build   # → dist/ai-speedometer
 ```
 
 ## Configuration Files
 
 API keys and configuration are stored in:
 
-- **Verified + Custom Verified Providers**: 
+- **Verified + Custom Verified Providers**:
   - Primary: `~/.local/share/opencode/auth.json`
   - Backup: `~/.config/ai-speedometer/ai-benchmark-config.json` (verifiedProviders section)
 - **Custom Providers**: `~/.config/ai-speedometer/ai-benchmark-config.json` (customProviders section)
-- **Provider Definitions**: `./custom-verified-providers.json`
+- **Provider Definitions**: `./custom-verified-providers.json` (bundled at build time)
 
 ## Requirements
 
-- Node.js 18+
+- **Runtime**: Bun 1.0+ (required — install from [bun.sh](https://bun.sh))
 - API keys for AI providers
 - Terminal with arrow keys and ANSI colors

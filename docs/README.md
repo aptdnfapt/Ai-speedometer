@@ -84,6 +84,19 @@ The system supports three types of providers:
 
 ## Recent Updates
 
+### Phase 8 — Build, Polish & Cleanup
+
+Production-ready build with full TypeScript, clean dependencies, and proper binary distribution:
+
+- **Standalone binary** — `bun build --compile` produces a single ELF executable at `dist/ai-speedometer`
+- **Scripts**: `bun run build`, `bun run typecheck`, `bun test`, `bun test --watch`, `bun test --update-snapshots`
+- **Removed unused deps** — `@ai-sdk/anthropic`, `@ai-sdk/openai-compatible`, `ai`, `cli-table3`, `dotenv`, `esbuild` removed; only `jsonc-parser` remains
+- **SIGINT handler** — `renderer.destroy()` + `process.exit(0)` on `SIGINT` in `src/tui/index.tsx`
+- **Loading guard** — `ModelSelectScreen` shows "Loading config..." during initial config load
+- **0 TypeScript errors** — `bun tsc --noEmit` passes clean
+
+Build: `bun run build` → `dist/ai-speedometer` (standalone binary, no bun required)
+
 ### Phase 7 — Tests
 
 Comprehensive test suite using `bun test` + `@opentui/react/test-utils`:

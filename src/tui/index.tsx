@@ -7,5 +7,10 @@ export async function startTui(): Promise<void> {
     exitOnCtrlC: false
   })
 
+  process.on('SIGINT', () => {
+    renderer.destroy()
+    process.exit(0)
+  })
+
   createRoot(renderer).render(<App />)
 }

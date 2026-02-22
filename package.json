@@ -10,13 +10,16 @@
   "preferGlobal": true,
 
   "engines": {
-    "node": ">=18.0.0"
+    "bun": ">=1.0.0"
   },
   "scripts": {
     "start": "bun src/index.ts",
     "dev": "bun --watch src/index.ts",
     "test": "bun test",
-    "build": "bun build src/index.ts --outfile dist/ai-speedometer --target bun",
+    "test:watch": "bun test --watch",
+    "test:update": "bun test --update-snapshots",
+    "typecheck": "bun tsc --noEmit",
+    "build": "bun build src/index.ts --outdir dist --target bun && printf '#!/usr/bin/env bun\\n' | cat - dist/index.js > dist/ai-speedometer && chmod +x dist/ai-speedometer && rm dist/index.js",
     "prepublishOnly": "bun run build"
   },
   "keywords": [
@@ -51,14 +54,7 @@
     "ai-benchmark-config.json.template"
   ],
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.17",
-    "@ai-sdk/openai-compatible": "^1.0.17",
-    "ai": "^5.0.44",
-    "cli-table3": "^0.6.5",
-    "dotenv": "^17.2.2",
     "jsonc-parser": "^3.3.1"
   },
-  "devDependencies": {
-    "esbuild": "^0.25.10"
-  }
+  "devDependencies": {}
 }

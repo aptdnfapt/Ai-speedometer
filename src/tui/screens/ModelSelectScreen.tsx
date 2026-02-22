@@ -192,6 +192,14 @@ export function ModelSelectScreen() {
     }
   })
 
+  if (state.isLoadingConfig) {
+    return (
+      <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
+        <text fg="#565f89">Loading config...</text>
+      </box>
+    )
+  }
+
   const nameW = Math.floor((CARD_W - 10) / 2)
   const provW = CARD_W - nameW - 10
 

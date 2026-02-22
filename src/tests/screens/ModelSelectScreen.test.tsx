@@ -12,12 +12,12 @@ function Wrapped() {
 }
 
 describe('ModelSelectScreen', () => {
-  test('renders search input', async () => {
+  test('renders loading state initially', async () => {
     const s = await testRender(<Wrapped />, { width: 80, height: 30 })
     await s.renderOnce()
     const frame = s.captureCharFrame()
     s.renderer.destroy()
-    expect(frame).toContain('Search')
+    expect(frame).toContain('Loading config')
   })
 
   test('snapshot: ModelSelectScreen initial state', async () => {
