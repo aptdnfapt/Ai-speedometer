@@ -1,13 +1,14 @@
 {
   "name": "ai-speedometer",
-  "version": "2.0.5",
+  "version": "2.1.0",
   "description": "A comprehensive CLI tool for benchmarking AI models across multiple providers with parallel execution and professional metrics",
   "bin": {
     "ai-speedometer": "dist/ai-speedometer",
     "aispeed": "dist/ai-speedometer"
   },
   "engines": {
-    "bun": ">=1.0.0"
+    "bun": ">=1.0.0",
+    "node": ">=18.0.0"
   },
   "scripts": {
     "start": "bun src/index.ts",
@@ -16,7 +17,7 @@
     "test:watch": "bun test --watch",
     "test:update": "bun test --update-snapshots",
     "typecheck": "bun tsc --noEmit",
-    "build": "bun build src/index.ts --outdir dist --target bun --external '@opentui/core' --external '@opentui/react' --external 'react' --external 'react-reconciler' && printf '#!/usr/bin/env bun\\n' | cat - dist/index.js > dist/ai-speedometer && chmod +x dist/ai-speedometer && rm dist/index.js",
+    "build": "bun build src/index.ts --outdir dist --target bun --external '@opentui/core' --external '@opentui/react' --external 'react' --external 'react-reconciler' && cat scripts/shebang dist/index.js > dist/ai-speedometer && chmod +x dist/ai-speedometer && rm dist/index.js",
     "prepublishOnly": "bun run build"
   },
   "keywords": [
@@ -47,6 +48,7 @@
   "files": [
     "dist/",
     "docs/",
+    "scripts/",
     "README.md",
     "ai-benchmark-config.json.template"
   ],

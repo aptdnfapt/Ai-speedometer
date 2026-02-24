@@ -1,0 +1,6 @@
+#!/bin/sh -
+':'; /*-
+test1=$(bun --version 2>&1) && exec bun "$0" "$@"
+test2=$(node --version 2>&1) && exec node "$0" "$@"
+exec printf '%s\n' "$test1" "$test2" 1>&2
+*/
