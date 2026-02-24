@@ -154,75 +154,109 @@ const readOpencodeGlobalConfig = (): OpencodeGlobalConfig => {
 }
 
 export const getOpencodeGlobalConfigProviders = async (): Promise<Provider[]> => {
-  try {
-    const globalConfig = readOpencodeGlobalConfig()
-    if (!globalConfig.provider || Object.keys(globalConfig.provider).length === 0) return []
-
-    const allModelsDevProviders = await getAllProviders()
-    const result: Provider[] = []
-
-    for (const [providerId, entry] of Object.entries(globalConfig.provider)) {
-      const apiKey = entry.options?.apiKey
-      if (!apiKey) continue // only surface providers where an apiKey is explicitly set
-
-      // look up this provider in models.dev to get baseUrl, type, and model list
-      const mdProvider = allModelsDevProviders.find(p => p.id === providerId)
-
-      // resolve models: inline models from config take precedence, fall back to models.dev
-      let models: Array<{ id: string; name: string }> = []
-      if (entry.models && Object.keys(entry.models).length > 0) {
-        models = Object.entries(entry.models).map(([modelKey, m]) => ({
-          id: `${providerId}_${m.id ?? modelKey}`,
-          name: m.name ?? m.id ?? modelKey
-        }))
-      } else if (mdProvider) {
-        models = mdProvider.models.map(m => ({ id: `${providerId}_${m.id}`, name: m.name }))
-      }
-
-      // resolve type: npm field hint → anthropic or openai-compatible
-      const npm = entry.npm ?? mdProvider?.type
-      const type: Provider['type'] = npm?.includes('anthropic')
-        ? 'anthropic'
-        : (mdProvider?.type as Provider['type']) ?? 'openai-compatible'
-
-      result.push({
-        id: providerId,
-        name: entry.name ?? mdProvider?.name ?? providerId,
-        type,
-        baseUrl: entry.options?.baseURL ?? entry.api ?? mdProvider?.baseUrl ?? '',
-        apiKey,
-        models
-      })
-    }
-
-    return result
-  } catch (error) {
-    console.warn('Warning: Could not load opencode global config providers:', (error as Error).message)
-    return []
-  }
+  return getAuthenticatedProviders()
 }
 
 export const getAuthenticatedProviders = async (): Promise<Provider[]> => {
-  const authData = await readAuthJson()
-  const allProviders = await getAllProviders()
-  const authenticatedProviders: Provider[] = []
+  try {
+    const [allModelsDevProviders, authData, globalConfig] = await Promise.all([
+      getAllProviders(),
+      readAuthJson(),
+      Promise.resolve(readOpencodeGlobalConfig())
+    ])
 
-  for (const [providerId, authInfo] of Object.entries(authData)) {
-    const providerInfo = allProviders.find(p => p.id === providerId)
-    if (providerInfo && authInfo.type === 'api' && authInfo.key) {
-      const models = await getModelsForProvider(providerId)
-      authenticatedProviders.push({
-        id: providerId,
-        name: providerInfo.name,
-        type: providerInfo.type as Provider['type'],
-        baseUrl: providerInfo.baseUrl,
-        apiKey: authInfo.key,
-        models: models.map(model => ({ name: model.name, id: `${providerId}_${model.id}` }))
+    // Step 1: build database — models.dev as base, config inline models merged on top (additive)
+    // exactly like opencode: database[providerID] = mergeDeep(modelsDevEntry, configEntry)
+    const database = new Map<string, {
+      id: string
+      name: string
+      type: string
+      baseUrl: string
+      models: Map<string, { id: string; name: string }>
+      npm?: string
+    }>()
+
+    // seed database from models.dev
+    for (const mdProvider of allModelsDevProviders) {
+      const modelMap = new Map<string, { id: string; name: string }>()
+      for (const m of mdProvider.models) {
+        modelMap.set(`${mdProvider.id}_${m.id}`, { id: `${mdProvider.id}_${m.id}`, name: m.name })
+      }
+      database.set(mdProvider.id, {
+        id: mdProvider.id,
+        name: mdProvider.name,
+        type: mdProvider.type,
+        baseUrl: mdProvider.baseUrl,
+        models: modelMap
       })
     }
-  }
 
-  return authenticatedProviders
+    // merge config providers into database — config inline models added/override on top
+    for (const [providerID, entry] of Object.entries(globalConfig.provider ?? {})) {
+      const existing = database.get(providerID)
+      const modelMap: Map<string, { id: string; name: string }> = existing
+        ? new Map(existing.models)
+        : new Map()
+
+      for (const [modelKey, m] of Object.entries(entry.models ?? {})) {
+        const resolvedId = `${providerID}_${m.id ?? modelKey}`
+        modelMap.set(resolvedId, { id: resolvedId, name: m.name ?? m.id ?? modelKey })
+      }
+
+      database.set(providerID, {
+        id: providerID,
+        name: entry.name ?? existing?.name ?? providerID,
+        type: existing?.type ?? 'openai-compatible',
+        baseUrl: entry.options?.baseURL ?? entry.api ?? existing?.baseUrl ?? '',
+        models: modelMap,
+        npm: entry.npm
+      })
+    }
+
+    // Step 2: resolve who has a key — auth.json first, then explicit options.apiKey in config
+    // exactly like opencode: auth.json key + database entry = provider in final list
+    const providerMap = new Map<string, Provider>()
+
+    // auth.json keys
+    for (const [providerID, authInfo] of Object.entries(authData)) {
+      if (authInfo.type !== 'api' || !authInfo.key) continue
+      const dbEntry = database.get(providerID)
+      if (!dbEntry) continue
+      const configEntry = globalConfig.provider?.[providerID]
+      const npm = dbEntry.npm ?? configEntry?.npm
+      const type: Provider['type'] = npm?.includes('anthropic') ? 'anthropic' : dbEntry.type as Provider['type']
+      providerMap.set(providerID, {
+        id: providerID,
+        name: dbEntry.name,
+        type,
+        baseUrl: dbEntry.baseUrl,
+        apiKey: authInfo.key,
+        models: Array.from(dbEntry.models.values())
+      })
+    }
+
+    // explicit options.apiKey in config (override auth.json if both exist)
+    for (const [providerID, entry] of Object.entries(globalConfig.provider ?? {})) {
+      if (!entry.options?.apiKey) continue
+      const dbEntry = database.get(providerID)
+      if (!dbEntry) continue
+      const npm = dbEntry.npm ?? entry.npm
+      const type: Provider['type'] = npm?.includes('anthropic') ? 'anthropic' : dbEntry.type as Provider['type']
+      providerMap.set(providerID, {
+        id: providerID,
+        name: dbEntry.name,
+        type,
+        baseUrl: dbEntry.baseUrl,
+        apiKey: entry.options.apiKey,
+        models: Array.from(dbEntry.models.values())
+      })
+    }
+
+    return Array.from(providerMap.values())
+  } catch (error) {
+    console.warn('Warning: Could not load providers:', (error as Error).message)
+    return []
+  }
 }
 
 export const getCustomProviders = async (): Promise<Provider[]> => []
@@ -253,7 +287,7 @@ export const removeApiKey = async (providerId: string): Promise<boolean> => {
 }
 
 export const getAllAvailableProviders = async (includeAllProviders = false): Promise<Provider[]> => {
-  const [authenticatedProviders, customProvidersFromConfig, customVerifiedProviders, opencodeGlobalProviders] = await Promise.all([
+  const [opencodeProviders, customProvidersFromConfig, customVerifiedProviders] = await Promise.all([
     getAuthenticatedProviders(),
     (async () => {
       try {
@@ -270,22 +304,20 @@ export const getAllAvailableProviders = async (includeAllProviders = false): Pro
         console.warn('Warning: Could not load custom verified providers:', (error as Error).message)
         return []
       }
-    })(),
-    getOpencodeGlobalConfigProviders()
+    })()
   ])
 
   const providerMap = new Map<string, Provider>()
 
-  // priority (lowest → highest): bundled → opencode global config → our config → auth.json
+  // priority (lowest → highest): bundled → opencode (auth+config merged) → our config
   customVerifiedProviders.forEach(p => providerMap.set(p.id, p as unknown as Provider))
-  opencodeGlobalProviders.forEach(p => providerMap.set(p.id, p))
+  opencodeProviders.forEach(p => providerMap.set(p.id, p))
   customProvidersFromConfig.forEach(p => providerMap.set(p.id, p))
-  authenticatedProviders.forEach(p => providerMap.set(p.id, p))
 
   if (includeAllProviders) {
     try {
       const allModelsDevProviders = await getAllProviders()
-      const authenticatedIds = new Set(authenticatedProviders.map(p => p.id))
+      const authenticatedIds = new Set(opencodeProviders.map((p: Provider) => p.id))
       const customIds = new Set(customProvidersFromConfig.map(p => p.id))
       const customVerifiedIds = new Set(customVerifiedProviders.map(p => p.id))
 
