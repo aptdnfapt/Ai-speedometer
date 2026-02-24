@@ -68,7 +68,7 @@ export const readAuthJson = async (): Promise<AuthData> => {
     const errors: ParseError[] = []
     const parsed = parseJsonc(data, errors, { allowTrailingComma: true }) as AuthData
     if (errors.length > 0) {
-      console.warn('Warning: JSONC parsing errors in auth.json')
+      console.warn('Warning: JSONC parsing errors in auth.json:', errors.map(e => e.error).join(', '))
       return parsed || {}
     }
     return parsed
@@ -145,8 +145,8 @@ const readOpencodeGlobalConfig = (): OpencodeGlobalConfig => {
           provider: { ...(merged.provider ?? {}), ...(parsed.provider ?? {}) }
         }
       }
-    } catch {
-      // silently skip unreadable files
+    } catch (error) {
+      console.warn(`Warning: Could not read opencode config file ${filename}:`, (error as Error).message)
     }
   }
 

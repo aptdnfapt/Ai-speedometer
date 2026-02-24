@@ -36,7 +36,8 @@ async function loadConfig(includeAll: boolean): Promise<{ providers: Provider[] 
   try {
     const providers = await getAllAvailableProviders(includeAll)
     return { providers }
-  } catch {
+  } catch (error) {
+    console.error('Error: Failed to load providers:', (error as Error).message)
     return { providers: [] }
   }
 }
@@ -90,6 +91,7 @@ export async function runHeadlessBenchmark(cliArgs: CliArgs): Promise<void> {
       }
 
       const result = await benchmarkSingleModelRest(modelConfig)
+      if (!result.success && result.error) console.error(`Error: Benchmark failed: ${result.error}`)
       console.log(buildJsonOutput(customProvider.name, customProvider.id, modelDef.name, modelDef.id, result, cliArgs.formatted))
       process.exit(result.success ? 0 : 1)
     }
@@ -172,6 +174,7 @@ export async function runHeadlessBenchmark(cliArgs: CliArgs): Promise<void> {
     }
 
     const result = await benchmarkSingleModelRest(modelConfig)
+    if (!result.success && result.error) console.error(`Error: Benchmark failed: ${result.error}`)
     console.log(buildJsonOutput(provider.name, provider.id, model.name, model.id, result, cliArgs.formatted))
     process.exit(result.success ? 0 : 1)
   } catch (error) {
