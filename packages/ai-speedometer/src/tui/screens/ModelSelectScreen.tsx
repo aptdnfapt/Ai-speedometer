@@ -139,7 +139,7 @@ export function ModelSelectScreen() {
   }, [dispatch, navigate])
 
   usePaste((text) => {
-    setSearchQuery(q => q + text)
+    setSearchQuery(q => q + text.replace(/[\r\n]/g, ''))
   })
 
   useKeyboard((key) => {

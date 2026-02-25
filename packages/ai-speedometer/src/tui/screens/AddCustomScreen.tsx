@@ -65,11 +65,12 @@ export function AddCustomScreen() {
   }
 
   usePaste((text) => {
-    if (step === 'id')     setProviderId(v => v + text)
-    else if (step === 'name')   setProviderName(v => v + text)
-    else if (step === 'url')    setBaseUrl(v => v + text)
-    else if (step === 'key')    setApiKey(v => v + text)
-    else if (step === 'models') setModelInput(v => v + text)
+    const clean = text.replace(/[\r\n]/g, '')
+    if (step === 'id')          setProviderId(v => v + clean)
+    else if (step === 'name')   setProviderName(v => v + clean)
+    else if (step === 'url')    setBaseUrl(v => v + clean)
+    else if (step === 'key')    setApiKey(v => v + clean)
+    else if (step === 'models') setModelInput(v => v + clean)
   })
 
   useKeyboard((key) => {

@@ -12,6 +12,9 @@
     "build:tui": "bun run --cwd packages/ai-speedometer build",
     "build:headless": "bun run --cwd packages/ai-speedometer-headless build",
     "test": "bun test packages/ai-speedometer/src/tests",
-    "typecheck": "bun run --filter '*' typecheck"
+    "typecheck": "bun run --filter '*' typecheck",
+    "release:patch": "node scripts/release.mjs patch",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major"
   }
 }

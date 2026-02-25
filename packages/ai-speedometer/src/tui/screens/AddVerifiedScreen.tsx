@@ -86,8 +86,9 @@ export function AddVerifiedScreen() {
   }
 
   usePaste((text) => {
-    if (step === 'browse') setSearchQuery(q => q + text)
-    else if (step === 'confirm') setApiKey(k => k + text)
+    const clean = text.replace(/[\r\n]/g, '')
+    if (step === 'browse') setSearchQuery(q => q + clean)
+    else if (step === 'confirm') setApiKey(k => k + clean)
   })
 
   useKeyboard((key) => {

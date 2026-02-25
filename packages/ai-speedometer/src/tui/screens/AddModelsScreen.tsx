@@ -38,7 +38,8 @@ export function AddModelsScreen() {
   }, [])
 
   usePaste((text) => {
-    if (step === 'add') setModelInput(v => v + text)
+    const clean = text.replace(/[\r\n]/g, '')
+    if (step === 'add') setModelInput(v => v + clean)
   })
 
   useKeyboard((key) => {
