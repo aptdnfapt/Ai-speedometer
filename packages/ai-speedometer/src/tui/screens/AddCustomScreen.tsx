@@ -49,7 +49,7 @@ export function AddCustomScreen() {
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim(),
         models: models.map(m => ({
-          id: m.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+          id: m,
           name: m,
         })),
       })
@@ -117,7 +117,7 @@ export function AddCustomScreen() {
 
     if (step === 'name') {
       if (key.name === 'return' || key.name === 'enter') {
-        if (!providerName.trim()) { setInputError('Name is required'); return }
+        if (!providerName.trim()) setProviderName(providerId)
         setInputError('')
         setStep('url')
         return
@@ -296,7 +296,7 @@ export function AddCustomScreen() {
                 <text fg="#c0caf5">{providerName}_</text>
               </box>
               <box height={1}>
-                <text fg="#565f89">e.g. My OpenAI</text>
+                <text fg="#565f89">e.g. My OpenAI  (Enter to use "{providerId}")</text>
               </box>
             </box>
           )}

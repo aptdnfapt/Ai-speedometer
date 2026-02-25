@@ -220,6 +220,30 @@ export function BenchmarkScreen() {
       }
     }
 
+    // errors section (always visible after done)
+    if (allDone && errors.length > 0) {
+      rows.push(<box key="div-errors" height={1} backgroundColor="#292e42" />)
+      rows.push(
+        <box key="hdr-errors" height={1} flexDirection="row" paddingLeft={1}>
+          <text fg="#f7768e"> FAILED ({errors.length}) </text>
+        </box>
+      )
+      for (const s of errors) {
+        rows.push(
+          <box key={`err-${s.model.id}-${s.model.providerId}`} flexDirection="column" paddingLeft={2} paddingTop={1} paddingBottom={1}>
+            <box height={1} flexDirection="row">
+              <text fg="#f7768e">✗  </text>
+              <text fg="#c0caf5">{s.model.name}  </text>
+              <text fg="#565f89">({s.model.providerName})</text>
+            </box>
+            <box height={1} paddingLeft={3}>
+              <text fg="#f7768e">{s.error ?? 'Unknown error'}</text>
+            </box>
+          </box>
+        )
+      }
+    }
+
     // results table rows (inline, so they scroll too)
     rows.push(<box key="div-results" height={1} backgroundColor="#292e42" />)
     rows.push(

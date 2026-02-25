@@ -77,8 +77,16 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
     })
 
     if (!response.ok) {
-      await response.text()
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+      const errBody = await response.text()
+      let errDetail = ''
+      try {
+        const parsed = JSON.parse(errBody) as { error?: { message?: string } | string; message?: string }
+        if (typeof parsed.error === 'object' && parsed.error?.message) errDetail = parsed.error.message
+        else if (typeof parsed.error === 'string') errDetail = parsed.error
+        else if (parsed.message) errDetail = parsed.message
+        else errDetail = errBody.slice(0, 200)
+      } catch { errDetail = errBody.slice(0, 200) }
+      throw new Error(`${response.status} ${response.statusText}${errDetail ? ': ' + errDetail : ''}`)
     }
 
     const reader = response.body!.getReader()
