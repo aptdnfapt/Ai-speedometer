@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
 import { usePaste } from '../hooks/usePaste.ts'
-import type { Provider } from '../../types.ts'
+import type { Provider } from '@ai-speedometer/core/types'
 
 type Step = 'pick' | 'add'
 
@@ -27,7 +27,7 @@ export function AddModelsScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const { getCustomProvidersFromConfig } = await import('../../ai-config.ts')
+        const { getCustomProvidersFromConfig } = await import('@ai-speedometer/core/ai-config')
         const provs = await getCustomProvidersFromConfig()
         setProviders(provs)
       } catch (e) {
@@ -98,7 +98,7 @@ export function AddModelsScreen() {
     setSaveError('')
     const name = modelInput.trim()
     try {
-      const { addModelToCustomProvider } = await import('../../ai-config.ts')
+      const { addModelToCustomProvider } = await import('@ai-speedometer/core/ai-config')
       await addModelToCustomProvider(selectedProvider.id, {
         id: name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
         name,
@@ -111,7 +111,7 @@ export function AddModelsScreen() {
   }
 
   async function finishAdding() {
-    const { getAllAvailableProviders } = await import('../../opencode-integration.ts')
+    const { getAllAvailableProviders } = await import('@ai-speedometer/core/opencode-integration')
     const provs = await getAllAvailableProviders(false)
     dispatch({ type: 'SET_CONFIG', config: { providers: provs } })
     setDone(true)

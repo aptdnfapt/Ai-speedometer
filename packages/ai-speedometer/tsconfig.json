@@ -11,7 +11,10 @@
     "noEmit": true,
     "types": ["bun-types"],
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@ai-speedometer/core/*": ["../core/src/*"]
+    }
   },
   "include": ["src/**/*"]
 }

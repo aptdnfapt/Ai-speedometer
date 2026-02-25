@@ -1,4 +1,4 @@
-import type { Model, BenchmarkResult } from '../../types.ts'
+import type { Model, BenchmarkResult } from '@ai-speedometer/core/types'
 
 export const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 

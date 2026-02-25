@@ -1,0 +1,36 @@
+{
+  "name": "ai-speedometer-headless",
+  "version": "2.1.3",
+  "description": "Headless CLI for benchmarking AI models — runs on Node.js and Bun, no TUI dependencies",
+  "bin": {
+    "ai-speedometer-headless": "dist/ai-speedometer-headless"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  },
+  "scripts": {
+    "build": "bun build src/headless-entry.ts --outdir dist --target node --external 'jsonc-parser' && printf '#!/usr/bin/env node\\n' | cat - dist/headless-entry.js > dist/ai-speedometer-headless && chmod +x dist/ai-speedometer-headless && rm dist/headless-entry.js",
+    "typecheck": "bun tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "ai", "benchmark", "cli", "headless", "speedometer", "llm", "ci", "docker"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aptdnfapt/Ai-speedometer.git"
+  },
+  "bugs": { "url": "https://github.com/aptdnfapt/Ai-speedometer/issues" },
+  "homepage": "https://github.com/aptdnfapt/Ai-speedometer#readme",
+  "files": [
+    "dist/",
+    "../../README.md"
+  ],
+  "dependencies": {
+    "@ai-speedometer/core": "workspace:*",
+    "jsonc-parser": "^3.3.1"
+  }
+}

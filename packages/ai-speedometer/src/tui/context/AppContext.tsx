@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, type Dispatch } from 'react'
-import type { Provider, Model, BenchmarkResult, ModelBenchState } from '../../types.ts'
+import type { Provider, Model, BenchmarkResult, ModelBenchState } from '@ai-speedometer/core/types'
 
 export type Screen =
   | 'main-menu'
@@ -107,7 +107,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false
     async function loadConfig() {
       try {
-        const { getAllAvailableProviders } = await import('../../opencode-integration.ts')
+        const { getAllAvailableProviders } = await import('@ai-speedometer/core/opencode-integration')
         const providers = await getAllAvailableProviders(false)
         if (!cancelled) {
           dispatch({ type: 'SET_CONFIG', config: { providers } })

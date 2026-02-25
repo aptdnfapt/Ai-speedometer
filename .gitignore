@@ -4,3 +4,4 @@ ai-benchmark-config.json
 *.key
 debug.log
 dist/
+packages/*/dist/

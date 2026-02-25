@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
 import { usePaste } from '../hooks/usePaste.ts'
-import type { ProviderInfo } from '../../models-dev.ts'
+import type { ProviderInfo } from '@ai-speedometer/core/models-dev'
 
 type Step = 'browse' | 'confirm'
 
@@ -30,7 +30,7 @@ export function AddVerifiedScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const { getAllProviders } = await import('../../models-dev.ts')
+        const { getAllProviders } = await import('@ai-speedometer/core/models-dev')
         const providers = await getAllProviders()
         setAllProviders(providers)
         setFiltered(providers)
@@ -70,11 +70,11 @@ export function AddVerifiedScreen() {
     setSaving(true)
     setSaveError('')
     try {
-      const { addApiKey } = await import('../../opencode-integration.ts')
-      const { addVerifiedProvider, getVerifiedProvidersFromConfig } = await import('../../ai-config.ts')
+      const { addApiKey } = await import('@ai-speedometer/core/opencode-integration')
+      const { addVerifiedProvider, getVerifiedProvidersFromConfig } = await import('@ai-speedometer/core/ai-config')
       await addApiKey(selectedProvider.id, apiKey.trim())
       await addVerifiedProvider(selectedProvider.id, apiKey.trim())
-      const { getAllAvailableProviders } = await import('../../opencode-integration.ts')
+      const { getAllAvailableProviders } = await import('@ai-speedometer/core/opencode-integration')
       const providers = await getAllAvailableProviders(false)
       dispatch({ type: 'SET_CONFIG', config: { providers } })
       setSaveSuccess(true)

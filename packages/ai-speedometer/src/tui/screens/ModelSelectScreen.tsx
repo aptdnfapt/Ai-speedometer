@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
 import { usePaste } from '../hooks/usePaste.ts'
-import type { Model } from '../../types.ts'
+import type { Model } from '@ai-speedometer/core/types'
 
 interface ModelItem extends Model {
   key: string
@@ -50,7 +50,7 @@ export function ModelSelectScreen() {
 
     async function loadRecents() {
       try {
-        const { getRecentModels, cleanupRecentModelsFromConfig } = await import('../../ai-config.ts')
+        const { getRecentModels, cleanupRecentModelsFromConfig } = await import('@ai-speedometer/core/ai-config')
         await cleanupRecentModelsFromConfig()
         const recents: Array<{ modelId: string; providerName?: string }> = await getRecentModels()
         const keys = new Set<string>()

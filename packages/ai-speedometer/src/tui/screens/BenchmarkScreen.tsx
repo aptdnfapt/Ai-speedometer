@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { useKeyboard } from '@opentui/react'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
-import type { ModelBenchState, BenchmarkResult } from '../../types.ts'
+import type { ModelBenchState, BenchmarkResult } from '@ai-speedometer/core/types'
 import { BarChart } from '../components/BarChart.tsx'
 import { ResultsTable } from '../components/ResultsTable.tsx'
 
@@ -44,7 +44,7 @@ export function BenchmarkScreen() {
     )
 
     async function runAll() {
-      const { benchmarkSingleModelRest } = await import('../../benchmark.ts')
+      const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
 
       const promises = models.map(async (model) => {
         try {
@@ -88,7 +88,7 @@ export function BenchmarkScreen() {
       setAllDone(true)
 
       try {
-        const { addToRecentModels } = await import('../../ai-config.ts')
+        const { addToRecentModels } = await import('@ai-speedometer/core/ai-config')
         await addToRecentModels(models.map(m => ({ modelId: m.id, modelName: m.name, providerName: m.providerName })))
       } catch { /* silent */ }
     }

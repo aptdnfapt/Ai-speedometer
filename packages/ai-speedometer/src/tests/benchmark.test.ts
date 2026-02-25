@@ -47,7 +47,7 @@ describe('benchmarkSingleModelRest', () => {
     ]
     global.fetch = mock(() => makeFetchResponse(lines)) as unknown as typeof fetch
 
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(mockModel())
 
     expect(result.success).toBe(true)
@@ -64,7 +64,7 @@ describe('benchmarkSingleModelRest', () => {
   test('returns error result on network failure', async () => {
     global.fetch = mock(() => Promise.reject(new Error('Network timeout'))) as unknown as typeof fetch
 
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(mockModel())
 
     expect(result.success).toBe(false)
@@ -76,7 +76,7 @@ describe('benchmarkSingleModelRest', () => {
   test('returns error when API responds with non-ok status', async () => {
     global.fetch = mock(() => makeFetchResponse([], false, 401)) as unknown as typeof fetch
 
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(mockModel())
 
     expect(result.success).toBe(false)
@@ -84,7 +84,7 @@ describe('benchmarkSingleModelRest', () => {
   })
 
   test('returns error when API key is missing', async () => {
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(mockModel({ providerConfig: { baseUrl: 'https://api.openai.com/v1', apiKey: '' } }))
 
     expect(result.success).toBe(false)
@@ -92,7 +92,7 @@ describe('benchmarkSingleModelRest', () => {
   })
 
   test('returns error when baseUrl is missing', async () => {
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(mockModel({ providerConfig: { baseUrl: '', apiKey: 'sk-test' } }))
 
     expect(result.success).toBe(false)
@@ -111,7 +111,7 @@ describe('benchmarkSingleModelRest', () => {
       return makeFetchResponse(lines)
     }) as unknown as typeof fetch
 
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(mockModel({ providerType: 'anthropic' }))
 
     expect(result.success).toBe(true)
@@ -134,7 +134,7 @@ describe('benchmarkSingleModelRest', () => {
       return makeFetchResponse(lines)
     }) as unknown as typeof fetch
 
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(
       mockModel({ providerType: 'google', providerConfig: { baseUrl: 'https://generativelanguage.googleapis.com/v1beta', apiKey: 'gkey-test' } })
     )
@@ -152,7 +152,7 @@ describe('benchmarkSingleModelRest', () => {
     ]
     global.fetch = mock(() => makeFetchResponse(lines)) as unknown as typeof fetch
 
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(mockModel())
 
     expect(result.success).toBe(true)
@@ -168,7 +168,7 @@ describe('benchmarkSingleModelRest', () => {
     ]
     global.fetch = mock(() => makeFetchResponse(lines)) as unknown as typeof fetch
 
-    const { benchmarkSingleModelRest } = await import('../../src/benchmark.ts')
+    const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
     const result = await benchmarkSingleModelRest(mockModel())
 
     expect(result.success).toBe(true)

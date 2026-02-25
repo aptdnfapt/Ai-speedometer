@@ -1,4 +1,4 @@
-import type { BenchmarkResult } from '../../types.ts'
+import type { BenchmarkResult } from '@ai-speedometer/core/types'
 
 interface ResultsTableProps {
   results: BenchmarkResult[]

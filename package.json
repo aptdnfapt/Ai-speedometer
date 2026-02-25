@@ -1,64 +1,17 @@
 {
-  "name": "ai-speedometer",
-  "version": "2.1.1",
-  "description": "A comprehensive CLI tool for benchmarking AI models across multiple providers with parallel execution and professional metrics",
-  "bin": {
-    "ai-speedometer": "dist/ai-speedometer",
-    "aispeed": "dist/ai-speedometer"
-  },
-  "engines": {
-    "bun": ">=1.0.0",
-    "node": ">=18.0.0"
-  },
+  "name": "ai-speedometer-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/core",
+    "packages/ai-speedometer",
+    "packages/ai-speedometer-headless"
+  ],
   "scripts": {
-    "start": "bun src/index.ts",
-    "dev": "bun --watch src/index.ts",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "test:update": "bun test --update-snapshots",
-    "typecheck": "bun tsc --noEmit",
-    "build": "bun build src/index.ts --outdir dist --target bun --external '@opentui/core' --external '@opentui/react' --external 'react' --external 'react-reconciler' && cat scripts/shebang dist/index.js > dist/ai-speedometer && chmod +x dist/ai-speedometer && rm dist/index.js",
-    "prepublishOnly": "bun run build"
-  },
-  "keywords": [
-    "ai",
-    "benchmark",
-    "cli",
-    "speedometer",
-    "performance",
-    "llm",
-    "models",
-    "testing",
-    "openai",
-    "anthropic",
-    "ai-sdk",
-    "parallel",
-    "metrics"
-  ],
-  "author": "",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/aptdnfapt/Ai-speedometer.git"
-  },
-  "bugs": {
-    "url": "https://github.com/aptdnfapt/Ai-speedometer/issues"
-  },
-  "homepage": "https://github.com/aptdnfapt/Ai-speedometer#readme",
-  "files": [
-    "dist/",
-    "docs/",
-    "scripts/",
-    "README.md",
-    "ai-benchmark-config.json.template"
-  ],
-  "dependencies": {
-    "@opentui/core": "0.1.79",
-    "@opentui/react": "0.1.79",
-    "react": "^19.0.0",
-    "react-reconciler": "^0.32.0"
-  },
-  "devDependencies": {
-    "jsonc-parser": "^3.3.1"
+    "build": "bun run --filter '*' build",
+    "build:core": "bun run --cwd packages/core build",
+    "build:tui": "bun run --cwd packages/ai-speedometer build",
+    "build:headless": "bun run --cwd packages/ai-speedometer-headless build",
+    "test": "bun test packages/ai-speedometer/src/tests",
+    "typecheck": "bun run --filter '*' typecheck"
   }
 }

@@ -41,7 +41,7 @@ export function AddCustomScreen() {
     setStep('saving')
     setSaveError('')
     try {
-      const { addCustomProvider } = await import('../../ai-config.ts')
+      const { addCustomProvider } = await import('@ai-speedometer/core/ai-config')
       await addCustomProvider({
         id: providerId.trim(),
         name: providerName.trim(),
@@ -53,7 +53,7 @@ export function AddCustomScreen() {
           name: m,
         })),
       })
-      const { getAllAvailableProviders } = await import('../../opencode-integration.ts')
+      const { getAllAvailableProviders } = await import('@ai-speedometer/core/opencode-integration')
       const providers = await getAllAvailableProviders(false)
       dispatch({ type: 'SET_CONFIG', config: { providers } })
       setSavedModelCount(models.length)

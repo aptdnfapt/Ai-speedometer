@@ -9,23 +9,23 @@ exports[`AddVerifiedScreen snapshot: AddVerifiedScreen initial state 1`] = `
          │  Search: _                                                 │         
          │                                                            │         
          │                                                            │         
-         │                                                            │         
-         │  Loading...                                                │         
-         │                                                            │         
-         │                                                            │         
-         │                                                            │         
-         │                                                            │         
-         │                                                            │         
-         │                                                            │         
-         │                                                            │         
+         │  Loading...                                               ▲│         
+         │                                                           █│         
+         │                                                           █│         
+         │                                                           █│         
+         │                                                           █│         
+         │                                                           █│         
+         │                                                           █│         
          │                                                            │         
          │                                                            │         
          │                                                            │         
          │                                                            │         
          │                                                            │         
          │                                                            │         
+         │                                                           ▼│         
          │                                                            │         
-         │  0 providers                                               │         
+         │                                                            │         
+         │  0 providers   [↑↓/PgUp/PgDn/wheel] scroll                 │         
          │                                                            │         
          ╰────────────────────────────────────────────────────────────╯         
                                                                                 

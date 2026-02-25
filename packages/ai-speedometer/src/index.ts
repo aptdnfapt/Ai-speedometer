@@ -1,4 +1,4 @@
-import type { CliArgs } from './types.ts'
+import type { CliArgs } from '@ai-speedometer/core/types'
 
 function parseCliArgs(): CliArgs {
   const args = process.argv.slice(2)
@@ -58,7 +58,7 @@ if (cliArgs.help) {
   showHelp()
   process.exit(0)
 } else if (cliArgs.bench || cliArgs.benchCustom) {
-  const { runHeadlessBenchmark } = await import('./headless.ts')
+  const { runHeadlessBenchmark } = await import('@ai-speedometer/core/headless')
   await runHeadlessBenchmark(cliArgs)
 } else {
   const { startTui } = await import('./tui/index.tsx')
