@@ -64,38 +64,43 @@ The system supports three types of providers:
 
 ### Benchmarking Methods
 
-- **AI SDK Method** - Uses Vercel AI SDK with streaming
-  - Real-time token counting
-  - Time to First Token (TTFT) metrics
-  - Streaming response analysis
-
-- **REST API Method** - Direct HTTP API calls
-  - No streaming, complete response timing
-  - Consistent across all providers
-  - Fallback for compatibility
+- **REST API Method (Standard)** - Direct HTTP API calls
+  - Optimized for low overhead and precise timing
+  - Works with all OpenAI-compatible providers
+  - Consistent across all platforms (TUI and Headless)
+  - Time to First Token (TTFT) metrics via streaming response analysis
 
 ### Performance Metrics
 
 - **Total Time** - Complete request duration
-- **TTFT** - Time to First Token (streaming only)
+- **TTFT** - Time to First Token
 - **Tokens/Second** - Real-time throughput calculation
 - **Token Counts** - Input, output, and total tokens
 - **Provider Rankings** - Performance comparison across providers
 
 ## Recent Updates
 
+### v2.1.3 — Monorepo & Headless Split
+
+The project has been refactored into a monorepo for better modularity and lightweight distribution:
+
+- **`packages/core`** — Shared logic, benchmark engine, and configuration management.
+- **`packages/ai-speedometer`** — Full interactive TUI version (includes headless capabilities).
+- **`packages/ai-speedometer-headless`** — Dedicated lightweight headless-only version for CI/CD and automation.
+- **Improved Build System** — Bun-based builds for all packages.
+
 ### Phase 8 — Build, Polish & Cleanup
 
 Production-ready build with full TypeScript, clean dependencies, and proper binary distribution:
 
-- **Standalone binary** — `bun build --compile` produces a single ELF executable at `dist/ai-speedometer`
-- **Scripts**: `bun run build`, `bun run typecheck`, `bun test`, `bun test --watch`, `bun test --update-snapshots`
-- **Removed unused deps** — `@ai-sdk/anthropic`, `@ai-sdk/openai-compatible`, `ai`, `cli-table3`, `dotenv`, `esbuild` removed; only `jsonc-parser` remains
-- **SIGINT handler** — `renderer.destroy()` + `process.exit(0)` on `SIGINT` in `src/tui/index.tsx`
-- **Loading guard** — `ModelSelectScreen` shows "Loading config..." during initial config load
-- **0 TypeScript errors** — `bun tsc --noEmit` passes clean
+- **Modular Packages** — Split into core, tui, and headless packages.
+- **Scripts**: `bun run build`, `bun run build:tui`, `bun run build:headless`, `bun run typecheck`, `bun test`.
+- **Removed unused deps** — AI SDK dependencies removed from benchmark engine; direct REST API is now the only method.
+- **SIGINT handler** — Proper cleanup on exit in both TUI and headless modes.
+- **0 TypeScript errors** — `bun run typecheck` passes across all packages.
 
-Build: `bun run build` → `dist/ai-speedometer` (standalone binary, no bun required)
+Build: `bun run build` → builds all packages in the monorepo.
+
 
 ### Phase 7 — Tests
 
