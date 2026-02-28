@@ -10,24 +10,38 @@ Track OSS model speeds over time: [ai-speedometer.oliveowl.xyz](https://ai-speed
 
 ![Ai-speedometer benchmark](./pics/benchmark.png)
 
+## Packages
+
+The project is a monorepo split into three packages:
+
+| Package | Description | Runtime |
+|---|---|---|
+| `ai-speedometer` | Full TUI + headless benchmark CLI | Bun 1.0+ |
+| `ai-speedometer-headless` | Headless benchmark only, no TUI deps | Node.js 18+ or Bun |
+| `@ai-speedometer/core` | Shared benchmark engine (private) | — |
+
 ## Install
 
-Requires [Bun](https://bun.sh) runtime.
+### Standard (TUI + Headless)
+Full interactive terminal UI and headless benchmark support. Requires [Bun](https://bun.sh).
 
 ```bash
 bun install -g ai-speedometer
 ```
 
-Or with npm (Bun still required at runtime):
+### Headless Only (Lightweight)
+No TUI dependencies — runs on **Node.js or Bun**. Ideal for CI/CD, Docker, and scripts.
 
 ```bash
-npm install -g ai-speedometer
+npm install -g ai-speedometer-headless
+# or
+bun install -g ai-speedometer-headless
 ```
 
 Or run directly from source:
 
 ```bash
-bun src/index.ts
+bun run packages/ai-speedometer/src/index.ts
 ```
 
 ## What It Measures
@@ -37,77 +51,65 @@ bun src/index.ts
 - **Tokens/Second** - Real-time throughput
 - **Token Counts** - Input, output, and total tokens used
 
-## Features
-
-- **Interactive TUI** - Full terminal UI with Tokyo Night theme, menus, search, and live benchmark progress
-- **REST API Benchmarking** - Default method, works with all OpenAI-compatible providers
-- **Headless Mode** - Run benchmarks without interactive CLI using command-line arguments
-- **Parallel Execution** - Benchmark multiple models simultaneously
-- **Provider Management** - Add verified, custom verified, and custom providers
-
-## Quick Setup
-
-1. **Set Model**
-   ```bash
-   ai-speedometer
-   # Select "Run Benchmark" → "Add Verified Provider" → Choose provider (OpenAI, Anthropic, etc.)
-   # Enter your API key when prompted
-   ```
-
-2. **Choose Model Provider**
-    - Verified providers (OpenAI, Anthropic, Google) - auto-configured via models.dev
-    - Custom verified providers (pre-configured trusted providers) - add API key
-    - Custom providers (Ollama, local models) - add your base URL
-
-3. **Add API Key**
-   - Get API keys from your provider's dashboard
-   - Enter when prompted - stored securely in:
-     - `~/.local/share/opencode/auth.json` (primary storage)
-     - `~/.config/ai-speedometer/ai-benchmark-config.json` (backup storage)
-
-4. **Run Benchmark**
-   ```bash
-   ai-speedometer
-   # Select "Run Benchmark" → choose models → press Enter
-   ```
-
 ## Usage
 
+### Interactive TUI (`ai-speedometer` only)
 ```bash
-# Start interactive TUI
 ai-speedometer
-
-# Short alias
+# or short alias
 aispeed
-
-# Debug mode
-ai-speedometer --debug
-
-# Headless benchmark
-ai-speedometer --bench openai:gpt-4
-# With custom API key
-ai-speedometer --bench openai:gpt-4 --api-key "sk-your-key"
-# Custom provider
-ai-speedometer --bench-custom myprovider:mymodel --base-url https://... --api-key "..."
 ```
+
+### Headless Benchmark (both packages)
+
+```bash
+# Verified provider
+ai-speedometer --bench openai:gpt-4o
+ai-speedometer-headless --bench openai:gpt-4o
+
+# With explicit API key
+ai-speedometer-headless --bench openai:gpt-4o --api-key "sk-..."
+
+# Custom provider
+ai-speedometer-headless --bench-custom myprovider:mymodel \
+  --base-url https://api.example.com \
+  --api-key "..."
+
+# Pretty-print JSON output
+ai-speedometer-headless --bench openai:gpt-4o --formatted
+
+# Custom endpoint format
+ai-speedometer-headless --bench-custom myprovider:mymodel \
+  --base-url https://... --endpoint-format chat/completions
+```
+
+## Features
+- **Monorepo Architecture** - Split into `core`, `ai-speedometer` (TUI), and `ai-speedometer-headless` (dedicated CLI)
+- **Interactive TUI** - Full terminal UI with Tokyo Night theme, menus, search, and live benchmark progress
+- **Headless Mode** - Run benchmarks without interactive UI via CLI flags — outputs JSON, perfect for CI/CD
+- **Node.js Compatible Headless** - `ai-speedometer-headless` targets Node.js, no Bun required
+- **REST API Benchmarking** - Works with all OpenAI-compatible providers
+- **Parallel Execution** - Benchmark multiple models simultaneously
+- **Provider Management** - Add verified, custom verified, and custom providers
 
 ## Development
 
 ```bash
-# Run from source
-bun src/index.ts
+# Run from source (monorepo)
+bun run packages/ai-speedometer/src/index.ts
 
-# Run with auto-reload
-bun --watch src/index.ts
+# Build all packages
+bun run build
+
+# Specific builds
+bun run build:tui        # -> packages/ai-speedometer/dist/
+bun run build:headless   # -> packages/ai-speedometer-headless/dist/
 
 # Run tests
 bun test
 
 # Typecheck
 bun run typecheck
-
-# Build standalone binary
-bun run build   # → dist/ai-speedometer
 ```
 
 ## Configuration Files
@@ -122,6 +124,7 @@ API keys and configuration are stored in:
 
 ## Requirements
 
-- **Runtime**: Bun 1.0+ (required — install from [bun.sh](https://bun.sh))
+- **`ai-speedometer`**: Bun 1.0+ (install from [bun.sh](https://bun.sh))
+- **`ai-speedometer-headless`**: Node.js 18+ or Bun 1.0+
 - API keys for AI providers
-- Terminal with arrow keys and ANSI colors
+- Terminal with ANSI color support (TUI only)
