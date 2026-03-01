@@ -118,19 +118,20 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
 
         try {
           if (model.providerType === 'anthropic') {
-            if (trimmedLine.startsWith('data: ')) {
-              const jsonStr = trimmedLine.slice(6)
+            const anthropicDataPrefix = trimmedLine.startsWith('data: ') ? 6 : trimmedLine.startsWith('data:') ? 5 : -1
+            if (anthropicDataPrefix !== -1) {
+              const jsonStr = trimmedLine.slice(anthropicDataPrefix)
               if (jsonStr === '[DONE]') continue
               const chunk = JSON.parse(jsonStr) as Record<string, unknown>
               const chunkTyped = chunk as {
                 type?: string
-                delta?: { text?: string }
+                delta?: { type?: string; text?: string; thinking?: string }
                 message?: { usage?: { input_tokens?: number } }
                 usage?: { output_tokens?: number; input_tokens?: number }
               }
-              if (chunkTyped.type === 'content_block_delta' && chunkTyped.delta?.text) {
+              if (chunkTyped.type === 'content_block_delta' && (chunkTyped.delta?.text || chunkTyped.delta?.thinking)) {
                 if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
-                streamedText += chunkTyped.delta.text
+                streamedText += chunkTyped.delta?.text || chunkTyped.delta?.thinking || ''
               } else if (chunkTyped.type === 'message_start' && chunkTyped.message?.usage) {
                 inputTokens = chunkTyped.message.usage.input_tokens || 0
               } else if (chunkTyped.type === 'message_delta') {
@@ -142,13 +143,13 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
             } else {
               const chunk = JSON.parse(trimmedLine) as {
                 type?: string
-                delta?: { text?: string }
+                delta?: { type?: string; text?: string; thinking?: string }
                 message?: { usage?: { input_tokens?: number } }
                 usage?: { output_tokens?: number; input_tokens?: number }
               }
-              if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
+              if (chunk.type === 'content_block_delta' && (chunk.delta?.text || chunk.delta?.thinking)) {
                 if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
-                streamedText += chunk.delta.text
+                streamedText += chunk.delta?.text || chunk.delta?.thinking || ''
               } else if (chunk.type === 'message_start' && chunk.message?.usage) {
                 inputTokens = chunk.message.usage.input_tokens || 0
               } else if (chunk.type === 'message_delta') {
@@ -168,22 +169,38 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
             if (chunk.usageMetadata?.promptTokenCount) inputTokens = chunk.usageMetadata.promptTokenCount
             if (chunk.usageMetadata?.candidatesTokenCount) outputTokens = chunk.usageMetadata.candidatesTokenCount
           } else {
-            if (trimmedLine.startsWith('data: ')) {
-              const jsonStr = trimmedLine.slice(6)
-              if (jsonStr === '[DONE]') continue
-              const chunk = JSON.parse(jsonStr) as {
-                choices?: Array<{ delta?: { content?: string; reasoning?: string } }>
-                usage?: { prompt_tokens?: number; completion_tokens?: number }
-              }
-              if (chunk.choices?.[0]?.delta?.content) {
-                if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
-                streamedText += chunk.choices[0].delta.content
-              } else if (chunk.choices?.[0]?.delta?.reasoning) {
-                if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
-                streamedText += chunk.choices[0].delta.reasoning
-              }
-              if (chunk.usage?.prompt_tokens) inputTokens = chunk.usage.prompt_tokens
-              if (chunk.usage?.completion_tokens) outputTokens = chunk.usage.completion_tokens
+            const dataPrefix = trimmedLine.startsWith('data: ') ? 6 : trimmedLine.startsWith('data:') ? 5 : -1
+            if (dataPrefix === -1) continue
+            const jsonStr = trimmedLine.slice(dataPrefix)
+            if (jsonStr === '[DONE]') continue
+            const chunk = JSON.parse(jsonStr) as {
+              choices?: Array<{ delta?: { content?: string; reasoning?: string; reasoning_content?: string } }>
+              usage?: { prompt_tokens?: number; completion_tokens?: number }
+              type?: string
+              delta?: { type?: string; text?: string; thinking?: string }
+              message?: { usage?: { input_tokens?: number } }
+            }
+            if (chunk.choices?.[0]?.delta?.content) {
+              if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
+              streamedText += chunk.choices[0].delta.content
+            } else if (chunk.choices?.[0]?.delta?.reasoning) {
+              if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
+              streamedText += chunk.choices[0].delta.reasoning
+            } else if (chunk.choices?.[0]?.delta?.reasoning_content) {
+              if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
+              streamedText += chunk.choices[0].delta.reasoning_content
+            } else if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
+              if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
+              streamedText += chunk.delta.text
+            } else if (chunk.type === 'content_block_delta' && chunk.delta?.thinking) {
+              if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
+              streamedText += chunk.delta.thinking
+            }
+            if (chunk.usage?.prompt_tokens) inputTokens = chunk.usage.prompt_tokens
+            if (chunk.usage?.completion_tokens) outputTokens = chunk.usage.completion_tokens
+            if (chunk.type === 'message_start' && chunk.message?.usage?.input_tokens) inputTokens = chunk.message.usage.input_tokens
+            if (chunk.type === 'message_delta' && (chunk as unknown as { usage?: { output_tokens?: number } }).usage?.output_tokens) {
+              outputTokens = (chunk as unknown as { usage: { output_tokens: number } }).usage.output_tokens
             }
           }
         } catch {
