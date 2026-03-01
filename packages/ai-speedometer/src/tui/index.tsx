@@ -5,7 +5,7 @@ import { App } from './App.tsx'
 const ENABLE_BRACKETED_PASTE  = '\x1b[?2004h'
 const DISABLE_BRACKETED_PASTE = '\x1b[?2004l'
 
-export async function startTui(): Promise<void> {
+export async function startTui(logMode = false): Promise<void> {
   const renderer = await createCliRenderer({
     exitOnCtrlC: false
   })
@@ -23,5 +23,5 @@ export async function startTui(): Promise<void> {
     process.exit(0)
   })
 
-  createRoot(renderer).render(<App />)
+  createRoot(renderer).render(<App logMode={logMode} />)
 }

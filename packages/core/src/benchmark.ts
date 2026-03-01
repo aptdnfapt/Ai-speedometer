@@ -1,7 +1,8 @@
 import { TEST_PROMPT as testPrompt } from './constants.ts'
 import type { Model, BenchmarkResult } from './types.ts'
+import type { BenchLogger } from './logger.ts'
 
-export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkResult> {
+export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogger): Promise<BenchmarkResult> {
   try {
     if (!model.providerConfig || !model.providerConfig.apiKey) {
       throw new Error(`Missing API key for provider ${model.providerName}`)
@@ -20,6 +21,8 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
       actualModelId = model.name
     }
     actualModelId = actualModelId.trim()
+
+    await logger?.logHeader(model.name, model.providerName, model.providerConfig.apiKey)
 
     const startTime = Date.now()
     let firstTokenTime: number | null = null
@@ -96,16 +99,13 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
     const reader = response.body!.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
-    let isFirstChunk = true
+    let firstParsedTokenTime: number | null = null
 
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
-      if (isFirstChunk && !firstTokenTime) {
-        firstTokenTime = Date.now()
-        isFirstChunk = false
-      }
+      if (!firstTokenTime) firstTokenTime = Date.now()
 
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
@@ -113,6 +113,7 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
 
       for (const line of lines) {
         const trimmedLine = line.trim()
+        if (trimmedLine) await logger?.logRaw(trimmedLine)
         if (!trimmedLine) continue
 
         try {
@@ -128,6 +129,7 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
                 usage?: { output_tokens?: number; input_tokens?: number }
               }
               if (chunkTyped.type === 'content_block_delta' && chunkTyped.delta?.text) {
+                if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
                 streamedText += chunkTyped.delta.text
               } else if (chunkTyped.type === 'message_start' && chunkTyped.message?.usage) {
                 inputTokens = chunkTyped.message.usage.input_tokens || 0
@@ -145,6 +147,7 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
                 usage?: { output_tokens?: number; input_tokens?: number }
               }
               if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
+                if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
                 streamedText += chunk.delta.text
               } else if (chunk.type === 'message_start' && chunk.message?.usage) {
                 inputTokens = chunk.message.usage.input_tokens || 0
@@ -159,6 +162,7 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
               usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number }
             }
             if (chunk.candidates?.[0]?.content?.parts?.[0]?.text) {
+              if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
               streamedText += chunk.candidates[0].content.parts[0].text
             }
             if (chunk.usageMetadata?.promptTokenCount) inputTokens = chunk.usageMetadata.promptTokenCount
@@ -171,8 +175,13 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
                 choices?: Array<{ delta?: { content?: string; reasoning?: string } }>
                 usage?: { prompt_tokens?: number; completion_tokens?: number }
               }
-              if (chunk.choices?.[0]?.delta?.content) streamedText += chunk.choices[0].delta.content
-              else if (chunk.choices?.[0]?.delta?.reasoning) streamedText += chunk.choices[0].delta.reasoning
+              if (chunk.choices?.[0]?.delta?.content) {
+                if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
+                streamedText += chunk.choices[0].delta.content
+              } else if (chunk.choices?.[0]?.delta?.reasoning) {
+                if (!firstParsedTokenTime) firstParsedTokenTime = Date.now()
+                streamedText += chunk.choices[0].delta.reasoning
+              }
               if (chunk.usage?.prompt_tokens) inputTokens = chunk.usage.prompt_tokens
               if (chunk.usage?.completion_tokens) outputTokens = chunk.usage.completion_tokens
             }
@@ -183,16 +192,20 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
       }
     }
 
+    await logger?.flush()
+
     const endTime = Date.now()
     const totalTime = endTime - startTime
-    const timeToFirstToken = firstTokenTime ? firstTokenTime - startTime : totalTime
+    const effectiveFirstToken = firstParsedTokenTime ?? firstTokenTime
+    const timeToFirstToken = effectiveFirstToken ? effectiveFirstToken - startTime : totalTime
+    const generationTime = totalTime - timeToFirstToken
 
     const usedEstimateForOutput = !outputTokens
     const usedEstimateForInput = !inputTokens
     const finalOutputTokens = outputTokens || Math.round(streamedText.length / 4)
     const finalInputTokens = inputTokens || Math.round((testPrompt as string).length / 4)
     const totalTokens = finalInputTokens + finalOutputTokens
-    const tokensPerSecond = totalTime > 0 ? (finalOutputTokens / totalTime) * 1000 : 0
+    const tokensPerSecond = generationTime > 0 ? (finalOutputTokens / generationTime) * 1000 : 0
 
     return {
       model: model.name,
@@ -208,6 +221,7 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
       success: true
     }
   } catch (error) {
+    await logger?.flush()
     return {
       model: model.name,
       provider: model.providerName,

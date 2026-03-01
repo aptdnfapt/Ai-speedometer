@@ -73,9 +73,9 @@ function Shell() {
   )
 }
 
-export function App() {
+export function App({ logMode = false }: { logMode?: boolean }) {
   return (
-    <AppProvider>
+    <AppProvider logMode={logMode}>
       <Shell />
     </AppProvider>
   )

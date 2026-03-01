@@ -46,9 +46,13 @@ export function BenchmarkScreen() {
     async function runAll() {
       const { benchmarkSingleModelRest } = await import('@ai-speedometer/core/benchmark')
 
+      const logEnabled = state.logMode && !!state.runId
+      const { createBenchLogger } = logEnabled ? await import('@ai-speedometer/core/logger') : { createBenchLogger: null }
+
       const promises = models.map(async (model) => {
+        const logger = logEnabled && createBenchLogger ? await createBenchLogger(state.runId!) : undefined
         try {
-          const result: BenchmarkResult = await benchmarkSingleModelRest(model)
+          const result: BenchmarkResult = await benchmarkSingleModelRest(model, logger)
           if (!result.success) {
             const errMsg = result.error ?? 'Request failed'
             setModelStates(prev =>
@@ -273,7 +277,14 @@ export function BenchmarkScreen() {
   })
 
   const statusLine = allDone
-    ? <text fg="#9ece6a">All done!  [Enter]/[q] return  [↑↓/PgUp/PgDn/wheel] scroll</text>
+    ? (
+      <box flexDirection="row">
+        <text fg="#9ece6a">All done!  [Enter]/[Q] return  [↑↓/PgUp/PgDn/wheel] scroll</text>
+        {state.logMode && state.logPath && (
+          <text fg="#565f89">  log: {state.logPath}</text>
+        )}
+      </box>
+    )
     : (
       <box flexDirection="row">
         {running.length > 0 && <text fg="#ff9e64">{running.length} running  </text>}

@@ -17,6 +17,9 @@ export interface AppState {
   selectedModels: Model[]
   benchResults: ModelBenchState[]
   isLoadingConfig: boolean
+  logMode: boolean
+  logPath: string | null
+  runId: string | null
 }
 
 export type AppAction =
@@ -28,6 +31,7 @@ export type AppAction =
   | { type: 'BENCH_MODEL_DONE'; modelId: string; result: BenchmarkResult }
   | { type: 'BENCH_MODEL_ERROR'; modelId: string; error: string }
   | { type: 'BENCH_RESET' }
+  | { type: 'SET_LOG_INFO'; logMode: boolean; logPath: string | null; runId: string | null }
 
 const initialState: AppState = {
   screen: 'main-menu',
@@ -35,6 +39,9 @@ const initialState: AppState = {
   selectedModels: [],
   benchResults: [],
   isLoadingConfig: true,
+  logMode: false,
+  logPath: null,
+  runId: null,
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -90,6 +97,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'BENCH_RESET':
       return { ...state, benchResults: [], selectedModels: [] }
 
+    case 'SET_LOG_INFO':
+      return { ...state, logMode: action.logMode, logPath: action.logPath, runId: action.runId }
+
     default:
       return state
   }
@@ -100,8 +110,18 @@ const AppContext = createContext<{
   dispatch: Dispatch<AppAction>
 } | null>(null)
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
+export function AppProvider({ children, logMode = false }: { children: React.ReactNode; logMode?: boolean }) {
   const [state, dispatch] = useReducer(appReducer, initialState)
+
+  useEffect(() => {
+    if (logMode) {
+      import('@ai-speedometer/core/logger').then(({ createRunId, getLogPath }) => {
+        const runId = createRunId()
+        const logPath = getLogPath(runId)
+        dispatch({ type: 'SET_LOG_INFO', logMode: true, logPath, runId })
+      })
+    }
+  }, [logMode])
 
   useEffect(() => {
     let cancelled = false

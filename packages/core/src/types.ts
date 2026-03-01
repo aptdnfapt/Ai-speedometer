@@ -49,6 +49,7 @@ export interface ModelBenchState {
 
 export interface CliArgs {
   debug: boolean
+  log: boolean
   bench: string | null
   benchCustom: string | null
   apiKey: string | null
