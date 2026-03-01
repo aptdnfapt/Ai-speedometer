@@ -1,4 +1,5 @@
 {
+  "theme": "tokyonight",
   "verifiedProviders": {
     "openai": "sk-your-openai-api-key",
     "anthropic": "sk-ant-your-anthropic-api-key"

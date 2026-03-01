@@ -1,4 +1,5 @@
 import type { BenchmarkResult } from '@ai-speedometer/core/types'
+import { useTheme } from '../theme/ThemeContext.tsx'
 
 interface ResultsTableProps {
   results: BenchmarkResult[]
@@ -18,9 +19,9 @@ function trunc(s: string, w: number): string {
 }
 
 export function ResultsTable({ results, pendingCount }: ResultsTableProps) {
+  const theme = useTheme()
   const sorted = [...results].sort((a, b) => b.tokensPerSecond - a.tokensPerSecond)
 
-  // column widths matching old CLI
   const C = { rank: 4, model: 18, prov: 12, time: 10, ttft: 8, tps: 11, out: 8, inp: 8, tot: 8 }
   const totalW = C.rank + C.model + C.prov + C.time + C.ttft + C.tps + C.out + C.inp + C.tot + 9
 
@@ -45,10 +46,10 @@ export function ResultsTable({ results, pendingCount }: ResultsTableProps) {
   return (
     <box flexDirection="column" paddingLeft={1} paddingRight={1}>
       <box height={1}>
-        <text fg="#7dcfff">{header}</text>
+        <text fg={theme.accent}>{header}</text>
       </box>
       <box height={1}>
-        <text fg="#292e42">{sep}</text>
+        <text fg={theme.border}>{sep}</text>
       </box>
       {sorted.map((r, i) => {
         const rank = `${i + 1}`
@@ -74,17 +75,17 @@ export function ResultsTable({ results, pendingCount }: ResultsTableProps) {
 
         return (
           <box key={`${r.model}-${r.provider}-${i}`} height={1} flexDirection="row">
-            <text fg="#c0caf5">{line}</text>
-            {hasEst && <text fg="#ff9e64"> [est]</text>}
+            <text fg={theme.text}>{line}</text>
+            {hasEst && <text fg={theme.warning}> [est]</text>}
           </box>
         )
       })}
       <box height={1}>
-        <text fg="#292e42">{sep}</text>
+        <text fg={theme.border}>{sep}</text>
       </box>
       {pendingCount > 0 && (
         <box height={1}>
-          <text fg="#565f89">  Waiting for {pendingCount} more result{pendingCount !== 1 ? 's' : ''}...</text>
+          <text fg={theme.dim}>  Waiting for {pendingCount} more result{pendingCount !== 1 ? 's' : ''}...</text>
         </box>
       )}
     </box>

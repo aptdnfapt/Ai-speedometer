@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import { useRenderer } from '@opentui/react'
-import { useKeyboard } from '@opentui/react'
+import { useAppKeyboard as useKeyboard } from '../hooks/useAppKeyboard.ts'
 import { useNavigate } from '../context/AppContext.tsx'
+import { useTheme } from '../theme/ThemeContext.tsx'
 import pkg from '../../../package.json'
-
-const ITEMS = [
-  { label: '⚡ Run Benchmark',  desc: 'test model speed & throughput',  color: '#7dcfff' },
-  { label: '⚙  Manage Models',  desc: 'add providers and configure',     color: '#bb9af7' },
-  { label: '✕  Exit',           desc: 'quit the application',            color: '#f7768e' },
-]
 
 export function MainMenuScreen() {
   const navigate = useNavigate()
   const renderer = useRenderer()
+  const theme = useTheme()
   const [cursor, setCursor] = useState(0)
+
+  const ITEMS = [
+    { label: '⚡ Run Benchmark',  desc: 'test model speed & throughput',  color: theme.accent },
+    { label: '⚙  Manage Models',  desc: 'add providers and configure',     color: theme.secondary },
+    { label: '✕  Exit',           desc: 'quit the application',            color: theme.error },
+  ]
 
   useKeyboard((key) => {
     if (key.name === 'up') {
@@ -30,15 +32,15 @@ export function MainMenuScreen() {
   return (
     <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
       <box flexDirection="column" alignItems="center" marginBottom={2}>
-        <ascii-font text="AI-SPEEDOMETER" font="tiny" color="#7aa2f7" />
-        <text fg="#565f89">v{pkg.version}</text>
+        <ascii-font text="AI-SPEEDOMETER" font="tiny" color={theme.primary} />
+        <text fg={theme.dim}>v{pkg.version}</text>
       </box>
       <box
         flexDirection="column"
         border
         borderStyle="rounded"
-        borderColor="#292e42"
-        backgroundColor="#16161e"
+        borderColor={theme.border}
+        backgroundColor={theme.background}
         width={46}
       >
         {ITEMS.map((item, i) => {
@@ -48,17 +50,17 @@ export function MainMenuScreen() {
               key={i}
               flexDirection="row"
               alignItems="center"
-              backgroundColor={active ? '#292e42' : 'transparent'}
+              backgroundColor={active ? theme.border : 'transparent'}
               paddingLeft={2}
               paddingRight={2}
               paddingTop={1}
               paddingBottom={1}
             >
               <box flexDirection="column" flexGrow={1}>
-                <text fg={active ? item.color : '#565f89'}>
+                <text fg={active ? item.color : theme.dim}>
                   {item.label}
                 </text>
-                <text fg={active ? '#565f89' : '#292e42'}>
+                <text fg={active ? theme.dim : theme.border}>
                   {item.desc}
                 </text>
               </box>

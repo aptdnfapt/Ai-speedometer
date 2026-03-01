@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { useKeyboard, useTerminalDimensions } from '@opentui/react'
+import { useTerminalDimensions } from '@opentui/react'
+import { useAppKeyboard as useKeyboard } from '../hooks/useAppKeyboard.ts'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
+import { useTheme } from '../theme/ThemeContext.tsx'
 import { usePaste } from '../hooks/usePaste.ts'
 
 type ProviderType = 'openai-compatible' | 'anthropic'
@@ -8,7 +10,6 @@ type Step = 'type' | 'id' | 'name' | 'url' | 'key' | 'models' | 'saving' | 'done
 
 const STEPS: Step[] = ['type', 'id', 'name', 'url', 'key', 'models']
 const STEP_LABELS = ['Type', 'ID', 'Name', 'URL', 'Key', 'Models']
-
 const STEP_NUM = ['①', '②', '③', '④', '⑤', '⑥']
 
 function stepIndex(s: Step): number {
@@ -18,6 +19,7 @@ function stepIndex(s: Step): number {
 export function AddCustomScreen() {
   const { dispatch } = useAppContext()
   const navigate = useNavigate()
+  const theme = useTheme()
   const { width } = useTerminalDimensions()
 
   const CARD_W = Math.min(60, width - 4)
@@ -48,10 +50,7 @@ export function AddCustomScreen() {
         type: providerType,
         baseUrl: baseUrl.trim(),
         apiKey: apiKey.trim(),
-        models: models.map(m => ({
-          id: m,
-          name: m,
-        })),
+        models: models.map(m => ({ id: m, name: m })),
       })
       const { getAllAvailableProviders } = await import('@ai-speedometer/core/opencode-integration')
       const providers = await getAllAvailableProviders(false)
@@ -78,7 +77,6 @@ export function AddCustomScreen() {
       if (key.name === 'return' || key.name === 'enter') navigate('model-menu')
       return
     }
-
     if (step === 'saving') return
 
     if (step === 'type') {
@@ -109,9 +107,7 @@ export function AddCustomScreen() {
         return
       }
       if (key.name === 'backspace' || key.name === 'delete') { setProviderId(v => v.slice(0, -1)); return }
-      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') {
-        setProviderId(v => v + key.sequence)
-      }
+      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') setProviderId(v => v + key.sequence)
       return
     }
 
@@ -123,9 +119,7 @@ export function AddCustomScreen() {
         return
       }
       if (key.name === 'backspace' || key.name === 'delete') { setProviderName(v => v.slice(0, -1)); return }
-      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') {
-        setProviderName(v => v + key.sequence)
-      }
+      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') setProviderName(v => v + key.sequence)
       return
     }
 
@@ -138,22 +132,14 @@ export function AddCustomScreen() {
         return
       }
       if (key.name === 'backspace' || key.name === 'delete') { setBaseUrl(v => v.slice(0, -1)); return }
-      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') {
-        setBaseUrl(v => v + key.sequence)
-      }
+      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') setBaseUrl(v => v + key.sequence)
       return
     }
 
     if (step === 'key') {
-      if (key.name === 'return' || key.name === 'enter') {
-        setInputError('')
-        setStep('models')
-        return
-      }
+      if (key.name === 'return' || key.name === 'enter') { setInputError(''); setStep('models'); return }
       if (key.name === 'backspace' || key.name === 'delete') { setApiKey(v => v.slice(0, -1)); return }
-      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') {
-        setApiKey(v => v + key.sequence)
-      }
+      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') setApiKey(v => v + key.sequence)
       return
     }
 
@@ -170,9 +156,7 @@ export function AddCustomScreen() {
         return
       }
       if (key.name === 'backspace' || key.name === 'delete') { setModelInput(v => v.slice(0, -1)); return }
-      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') {
-        setModelInput(v => v + key.sequence)
-      }
+      if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') setModelInput(v => v + key.sequence)
     }
   })
 
@@ -183,10 +167,10 @@ export function AddCustomScreen() {
       <box height={1} paddingLeft={2} paddingRight={2} flexDirection="row">
         {STEPS.map((s, i) => (
           <box key={s} flexDirection="row">
-            <text fg={i < curStepIdx ? '#9ece6a' : i === curStepIdx ? '#7dcfff' : '#292e42'}>
+            <text fg={i < curStepIdx ? theme.success : i === curStepIdx ? theme.accent : theme.border}>
               {STEP_NUM[i]} {STEP_LABELS[i]}
             </text>
-            {i < STEPS.length - 1 && <text fg="#292e42">  </text>}
+            {i < STEPS.length - 1 && <text fg={theme.border}>  </text>}
           </box>
         ))}
       </box>
@@ -196,21 +180,10 @@ export function AddCustomScreen() {
   if (step === 'done') {
     return (
       <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-        <box
-          flexDirection="column"
-          border
-          borderStyle="rounded"
-          borderColor="#292e42"
-          backgroundColor="#16161e"
-          width={CARD_W}
-        >
+        <box flexDirection="column" border borderStyle="rounded" borderColor={theme.border} backgroundColor={theme.background} width={CARD_W}>
           <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
-            <box height={1}>
-              <text fg="#9ece6a">Custom provider added!  {savedModelCount} model{savedModelCount !== 1 ? 's' : ''} configured.</text>
-            </box>
-            <box height={1}>
-              <text fg="#565f89">Press [Enter] to return</text>
-            </box>
+            <box height={1}><text fg={theme.success}>Custom provider added!  {savedModelCount} model{savedModelCount !== 1 ? 's' : ''} configured.</text></box>
+            <box height={1}><text fg={theme.dim}>Press [Enter] to return</text></box>
           </box>
         </box>
       </box>
@@ -220,16 +193,9 @@ export function AddCustomScreen() {
   if (step === 'saving') {
     return (
       <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-        <box
-          flexDirection="column"
-          border
-          borderStyle="rounded"
-          borderColor="#292e42"
-          backgroundColor="#16161e"
-          width={CARD_W}
-        >
+        <box flexDirection="column" border borderStyle="rounded" borderColor={theme.border} backgroundColor={theme.background} width={CARD_W}>
           <box paddingLeft={2} paddingTop={1} paddingBottom={1}>
-            <text fg="#ff9e64">⠹ Saving...</text>
+            <text fg={theme.warning}>⠹ Saving...</text>
           </box>
         </box>
       </box>
@@ -238,40 +204,27 @@ export function AddCustomScreen() {
 
   return (
     <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-      <box
-        flexDirection="column"
-        border
-        borderStyle="rounded"
-        borderColor="#292e42"
-        backgroundColor="#16161e"
-        width={CARD_W}
-      >
+      <box flexDirection="column" border borderStyle="rounded" borderColor={theme.border} backgroundColor={theme.background} width={CARD_W}>
         <box height={1} paddingLeft={2} paddingTop={1}>
-          <text fg="#7dcfff">Add Custom Provider</text>
+          <text fg={theme.accent}>Add Custom Provider</text>
         </box>
 
-        <box height={1} backgroundColor="#292e42" />
+        <box height={1} backgroundColor={theme.border} />
 
         <box paddingTop={1} paddingBottom={1}>
           <ProgressBar />
         </box>
 
-        <box height={1} backgroundColor="#292e42" />
+        <box height={1} backgroundColor={theme.border} />
 
         <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
 
           {step === 'type' && (
             <box flexDirection="column">
               {typeItems.map((item, i) => (
-                <box
-                  key={item}
-                  height={1}
-                  width="100%"
-                  flexDirection="row"
-                  backgroundColor={i === typeCursor ? '#292e42' : 'transparent'}
-                >
-                  <text fg={i === typeCursor ? '#c0caf5' : '#565f89'}> {item}</text>
-                  {i === typeCursor && <text fg="#7dcfff"> ›</text>}
+                <box key={item} height={1} width="100%" flexDirection="row" backgroundColor={i === typeCursor ? theme.border : 'transparent'}>
+                  <text fg={i === typeCursor ? theme.text : theme.dim}> {item}</text>
+                  {i === typeCursor && <text fg={theme.accent}> ›</text>}
                 </box>
               ))}
             </box>
@@ -280,48 +233,40 @@ export function AddCustomScreen() {
           {step === 'id' && (
             <box flexDirection="column">
               <box height={1} flexDirection="row">
-                <text fg="#7aa2f7">Provider ID: </text>
-                <text fg="#c0caf5">{providerId}_</text>
+                <text fg={theme.primary}>Provider ID: </text>
+                <text fg={theme.text}>{providerId}_</text>
               </box>
-              <box height={1}>
-                <text fg="#565f89">e.g. my-openai</text>
-              </box>
+              <box height={1}><text fg={theme.dim}>e.g. my-openai</text></box>
             </box>
           )}
 
           {step === 'name' && (
             <box flexDirection="column">
               <box height={1} flexDirection="row">
-                <text fg="#7aa2f7">Display Name: </text>
-                <text fg="#c0caf5">{providerName}_</text>
+                <text fg={theme.primary}>Display Name: </text>
+                <text fg={theme.text}>{providerName}_</text>
               </box>
-              <box height={1}>
-                <text fg="#565f89">e.g. My OpenAI  (Enter to use "{providerId}")</text>
-              </box>
+              <box height={1}><text fg={theme.dim}>e.g. My OpenAI  (Enter to use "{providerId}")</text></box>
             </box>
           )}
 
           {step === 'url' && (
             <box flexDirection="column">
               <box height={1} flexDirection="row">
-                <text fg="#7aa2f7">Base URL: </text>
-                <text fg="#c0caf5">{baseUrl}_</text>
+                <text fg={theme.primary}>Base URL: </text>
+                <text fg={theme.text}>{baseUrl}_</text>
               </box>
-              <box height={1}>
-                <text fg="#565f89">e.g. https://api.example.com/v1</text>
-              </box>
+              <box height={1}><text fg={theme.dim}>e.g. https://api.example.com/v1</text></box>
             </box>
           )}
 
           {step === 'key' && (
             <box flexDirection="column">
               <box height={1} flexDirection="row">
-                <text fg="#7aa2f7">API Key: </text>
-                <text fg="#c0caf5">{apiKey}_</text>
+                <text fg={theme.primary}>API Key: </text>
+                <text fg={theme.text}>{apiKey}_</text>
               </box>
-              <box height={1}>
-                <text fg="#565f89">sk-...   (leave empty if not needed)</text>
-              </box>
+              <box height={1}><text fg={theme.dim}>sk-...   (leave empty if not needed)</text></box>
             </box>
           )}
 
@@ -330,33 +275,25 @@ export function AddCustomScreen() {
               {models.length > 0 && (
                 <box flexDirection="column">
                   {models.map(m => (
-                    <box key={m} height={1}>
-                      <text fg="#565f89">  · {m}</text>
-                    </box>
+                    <box key={m} height={1}><text fg={theme.dim}>  · {m}</text></box>
                   ))}
                 </box>
               )}
               <box height={1} flexDirection="row">
-                <text fg="#7aa2f7">Model name: </text>
-                <text fg="#c0caf5">{modelInput}_</text>
+                <text fg={theme.primary}>Model name: </text>
+                <text fg={theme.text}>{modelInput}_</text>
               </box>
               {models.length > 0 && (
-                <box height={1}>
-                  <text fg="#9ece6a">  {models.length} model{models.length !== 1 ? 's' : ''} added  (empty [Enter] to finish)</text>
-                </box>
+                <box height={1}><text fg={theme.success}>  {models.length} model{models.length !== 1 ? 's' : ''} added  (empty [Enter] to finish)</text></box>
               )}
               {saveError && (
-                <box height={1}>
-                  <text fg="#f7768e">Error: {saveError}</text>
-                </box>
+                <box height={1}><text fg={theme.error}>Error: {saveError}</text></box>
               )}
             </box>
           )}
 
           {inputError ? (
-            <box height={1}>
-              <text fg="#f7768e">{inputError}</text>
-            </box>
+            <box height={1}><text fg={theme.error}>{inputError}</text></box>
           ) : null}
         </box>
       </box>

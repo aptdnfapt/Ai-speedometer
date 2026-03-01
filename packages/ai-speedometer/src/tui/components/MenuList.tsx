@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useKeyboard } from '@opentui/react'
+import { useAppKeyboard as useKeyboard } from '../hooks/useAppKeyboard.ts'
+import { useTheme } from '../theme/ThemeContext.tsx'
 
 interface MenuItem {
   label: string
@@ -14,6 +15,7 @@ interface MenuListProps {
 }
 
 export function MenuList({ items, selectedIndex: initialIndex = 0, onSelect, onNavigate }: MenuListProps) {
+  const theme = useTheme()
   const [cursor, setCursor] = useState(initialIndex)
 
   useKeyboard((key) => {
@@ -39,17 +41,17 @@ export function MenuList({ items, selectedIndex: initialIndex = 0, onSelect, onN
             key={i}
             flexDirection="row"
             alignItems="center"
-            backgroundColor={isSelected ? '#292e42' : 'transparent'}
+            backgroundColor={isSelected ? theme.border : 'transparent'}
             paddingLeft={1}
             paddingRight={1}
           >
             <box flexDirection="column" flexGrow={1}>
-              <text fg={isSelected ? '#c0caf5' : '#565f89'}>{item.label}</text>
+              <text fg={isSelected ? theme.text : theme.dim}>{item.label}</text>
               {item.description ? (
-                <text fg={isSelected ? '#565f89' : '#292e42'}>{item.description}</text>
+                <text fg={isSelected ? theme.dim : theme.border}>{item.description}</text>
               ) : null}
             </box>
-            {isSelected && <text fg="#7aa2f7">›</text>}
+            {isSelected && <text fg={theme.primary}>›</text>}
           </box>
         )
       })}

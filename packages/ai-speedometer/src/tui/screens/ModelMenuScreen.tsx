@@ -1,5 +1,6 @@
-import { useKeyboard } from '@opentui/react'
+import { useAppKeyboard as useKeyboard } from '../hooks/useAppKeyboard.ts'
 import { useNavigate } from '../context/AppContext.tsx'
+import { useTheme } from '../theme/ThemeContext.tsx'
 import { MenuList } from '../components/MenuList.tsx'
 
 const ITEMS = [
@@ -12,6 +13,7 @@ const ITEMS = [
 
 export function ModelMenuScreen() {
   const navigate = useNavigate()
+  const theme = useTheme()
 
   useKeyboard((key) => {
     if (key.name === 'escape' || key.name === 'q') {
@@ -29,7 +31,7 @@ export function ModelMenuScreen() {
 
   return (
     <box flexDirection="column" flexGrow={1} padding={1}>
-      <text fg="#7aa2f7">Model Management</text>
+      <text fg={theme.primary}>Model Management</text>
       <box marginTop={1}>
         <MenuList items={ITEMS} onSelect={handleSelect} />
       </box>

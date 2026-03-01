@@ -13,6 +13,7 @@ interface AIConfig {
   verifiedProviders: Record<string, string>
   customProviders: Provider[]
   recentModels?: RecentModel[]
+  theme?: string
 }
 
 interface RecentModel {
@@ -51,6 +52,16 @@ export const readAIConfig = async (): Promise<AIConfig> => {
     console.warn('Warning: Could not read ai-benchmark-config.json:', (error as Error).message)
     return { verifiedProviders: {}, customProviders: [] }
   }
+}
+
+export const readThemeFromConfig = async (): Promise<string> => {
+  const config = await readAIConfig()
+  return config.theme ?? 'tokyonight'
+}
+
+export const writeThemeToConfig = async (theme: string): Promise<void> => {
+  const config = await readAIConfig()
+  await writeAIConfig({ ...config, theme })
 }
 
 export const writeAIConfig = async (config: AIConfig): Promise<boolean> => {

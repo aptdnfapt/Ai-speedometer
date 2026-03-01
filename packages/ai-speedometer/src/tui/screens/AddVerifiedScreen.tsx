@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { useKeyboard, useTerminalDimensions } from '@opentui/react'
+import { useTerminalDimensions } from '@opentui/react'
+import { useAppKeyboard as useKeyboard } from '../hooks/useAppKeyboard.ts'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
+import { useTheme } from '../theme/ThemeContext.tsx'
 import { usePaste } from '../hooks/usePaste.ts'
 import type { ProviderInfo } from '@ai-speedometer/core/models-dev'
 
@@ -9,6 +11,7 @@ type Step = 'browse' | 'confirm'
 export function AddVerifiedScreen() {
   const { dispatch } = useAppContext()
   const navigate = useNavigate()
+  const theme = useTheme()
   const { height, width } = useTerminalDimensions()
 
   const PAGE_SIZE = Math.max(3, height - 16)
@@ -71,7 +74,7 @@ export function AddVerifiedScreen() {
     setSaveError('')
     try {
       const { addApiKey } = await import('@ai-speedometer/core/opencode-integration')
-      const { addVerifiedProvider, getVerifiedProvidersFromConfig } = await import('@ai-speedometer/core/ai-config')
+      const { addVerifiedProvider } = await import('@ai-speedometer/core/ai-config')
       await addApiKey(selectedProvider.id, apiKey.trim())
       await addVerifiedProvider(selectedProvider.id, apiKey.trim())
       const { getAllAvailableProviders } = await import('@ai-speedometer/core/opencode-integration')
@@ -97,22 +100,10 @@ export function AddVerifiedScreen() {
         navigate('model-menu')
         return
       }
-      if (key.name === 'up') {
-        setCursor(c => Math.max(0, c - 1))
-        return
-      }
-      if (key.name === 'down') {
-        setCursor(c => Math.min(filtered.length - 1, c + 1))
-        return
-      }
-      if (key.name === 'pageup') {
-        setCursor(c => Math.max(0, c - PAGE_SIZE))
-        return
-      }
-      if (key.name === 'pagedown') {
-        setCursor(c => Math.min(filtered.length - 1, c + PAGE_SIZE))
-        return
-      }
+      if (key.name === 'up') { setCursor(c => Math.max(0, c - 1)); return }
+      if (key.name === 'down') { setCursor(c => Math.min(filtered.length - 1, c + 1)); return }
+      if (key.name === 'pageup') { setCursor(c => Math.max(0, c - PAGE_SIZE)); return }
+      if (key.name === 'pagedown') { setCursor(c => Math.min(filtered.length - 1, c + PAGE_SIZE)); return }
       if (key.name === 'return' || key.name === 'enter') {
         const prov = filtered[cursor]
         if (prov) {
@@ -124,10 +115,7 @@ export function AddVerifiedScreen() {
         }
         return
       }
-      if (key.name === 'backspace' || key.name === 'delete') {
-        setSearchQuery(q => q.slice(0, -1))
-        return
-      }
+      if (key.name === 'backspace' || key.name === 'delete') { setSearchQuery(q => q.slice(0, -1)); return }
       if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') {
         setSearchQuery(q => q + key.sequence)
       }
@@ -136,24 +124,13 @@ export function AddVerifiedScreen() {
 
     if (step === 'confirm') {
       if (saveSuccess) {
-        if (key.name === 'return' || key.name === 'enter') {
-          navigate('model-menu')
-        }
+        if (key.name === 'return' || key.name === 'enter') navigate('model-menu')
         return
       }
       if (saving) return
-      if (key.name === 'escape') {
-        setStep('browse')
-        return
-      }
-      if (key.name === 'return' || key.name === 'enter') {
-        save()
-        return
-      }
-      if (key.name === 'backspace' || key.name === 'delete') {
-        setApiKey(k => k.slice(0, -1))
-        return
-      }
+      if (key.name === 'escape') { setStep('browse'); return }
+      if (key.name === 'return' || key.name === 'enter') { save(); return }
+      if (key.name === 'backspace' || key.name === 'delete') { setApiKey(k => k.slice(0, -1)); return }
       if (key.sequence && key.sequence.length === 1 && !key.ctrl && !key.meta && key.sequence >= ' ') {
         setApiKey(k => k + key.sequence)
       }
@@ -163,68 +140,51 @@ export function AddVerifiedScreen() {
   if (step === 'confirm' && selectedProvider) {
     return (
       <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-        <box
-          flexDirection="column"
-          border
-          borderStyle="rounded"
-          borderColor="#292e42"
-          backgroundColor="#16161e"
-          width={CARD_W}
-        >
+        <box flexDirection="column" border borderStyle="rounded" borderColor={theme.border} backgroundColor={theme.background} width={CARD_W}>
           <box height={1} paddingLeft={2} paddingTop={1}>
-            <text fg="#7dcfff">Add Verified Provider</text>
+            <text fg={theme.accent}>Add Verified Provider</text>
           </box>
-          <box height={1} backgroundColor="#292e42" />
+          <box height={1} backgroundColor={theme.border} />
 
           <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
             <box height={1} flexDirection="row">
-              <text fg="#7aa2f7">Provider: </text>
-              <text fg="#c0caf5">{selectedProvider.name}</text>
+              <text fg={theme.primary}>Provider: </text>
+              <text fg={theme.text}>{selectedProvider.name}</text>
             </box>
             <box height={1} flexDirection="row">
-              <text fg="#565f89">Type:     </text>
-              <text fg="#565f89">{selectedProvider.type}</text>
+              <text fg={theme.dim}>Type:     </text>
+              <text fg={theme.dim}>{selectedProvider.type}</text>
             </box>
             <box height={1} flexDirection="row">
-              <text fg="#565f89">URL:      </text>
-              <text fg="#565f89">{selectedProvider.baseUrl}</text>
+              <text fg={theme.dim}>URL:      </text>
+              <text fg={theme.dim}>{selectedProvider.baseUrl}</text>
             </box>
             <box height={1} flexDirection="row">
-              <text fg="#565f89">Models:   </text>
-              <text fg="#565f89">{selectedProvider.models.length} available</text>
+              <text fg={theme.dim}>Models:   </text>
+              <text fg={theme.dim}>{selectedProvider.models.length} available</text>
             </box>
           </box>
 
-          <box height={1} backgroundColor="#292e42" />
+          <box height={1} backgroundColor={theme.border} />
 
           {saveSuccess ? (
             <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
-              <box height={1}>
-                <text fg="#9ece6a">Provider added!  {selectedProvider.models.length} models available</text>
-              </box>
-              <box height={1}>
-                <text fg="#565f89">Press [Enter] to return</text>
-              </box>
+              <box height={1}><text fg={theme.success}>Provider added!  {selectedProvider.models.length} models available</text></box>
+              <box height={1}><text fg={theme.dim}>Press [Enter] to return</text></box>
             </box>
           ) : (
             <box flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
               <box height={1} flexDirection="row">
-                <text fg="#7dcfff">API Key: </text>
-                <text fg="#c0caf5">{apiKey}_</text>
+                <text fg={theme.accent}>API Key: </text>
+                <text fg={theme.text}>{apiKey}_</text>
               </box>
               {saveError ? (
-                <box height={1}>
-                  <text fg="#f7768e">Error: {saveError}</text>
-                </box>
+                <box height={1}><text fg={theme.error}>Error: {saveError}</text></box>
               ) : null}
               {saving ? (
-                <box height={1}>
-                  <text fg="#ff9e64">Saving...</text>
-                </box>
+                <box height={1}><text fg={theme.warning}>Saving...</text></box>
               ) : (
-                <box height={1}>
-                  <text fg="#565f89">[Enter] save   [Esc] back to list</text>
-                </box>
+                <box height={1}><text fg={theme.dim}>[Enter] save   [Esc] back to list</text></box>
               )}
             </box>
           )}
@@ -235,56 +195,39 @@ export function AddVerifiedScreen() {
 
   return (
     <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-      <box
-        flexDirection="column"
-        border
-        borderStyle="rounded"
-        borderColor="#292e42"
-        backgroundColor="#16161e"
-        width={CARD_W}
-      >
+      <box flexDirection="column" border borderStyle="rounded" borderColor={theme.border} backgroundColor={theme.background} width={CARD_W}>
         <box flexDirection="row" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
-          <text fg="#7dcfff">Search: </text>
-          <text fg="#c0caf5">{searchQuery}_</text>
+          <text fg={theme.accent}>Search: </text>
+          <text fg={theme.text}>{searchQuery}_</text>
         </box>
 
-        <box height={1} backgroundColor="#292e42" />
+        <box height={1} backgroundColor={theme.border} />
 
-        <scrollbox ref={scrollboxRef} height={PAGE_SIZE} style={{ scrollbarOptions: { showArrows: true, trackOptions: { foregroundColor: '#7aa2f7', backgroundColor: '#292e42' } } }}>
+        <scrollbox ref={scrollboxRef} height={PAGE_SIZE} style={{ scrollbarOptions: { showArrows: true, trackOptions: { foregroundColor: theme.primary, backgroundColor: theme.border } } }}>
           {loadError && (
-            <box height={1} paddingLeft={2}>
-              <text fg="#f7768e">Error loading providers: {loadError}</text>
-            </box>
+            <box height={1} paddingLeft={2}><text fg={theme.error}>Error loading providers: {loadError}</text></box>
           )}
           {!loadError && filtered.length === 0 && (
-            <box height={1} paddingLeft={2}>
-              <text fg="#565f89">{allProviders.length === 0 ? 'Loading...' : 'No providers found'}</text>
-            </box>
+            <box height={1} paddingLeft={2}><text fg={theme.dim}>{allProviders.length === 0 ? 'Loading...' : 'No providers found'}</text></box>
           )}
           {filtered.map((prov, i) => {
             const isActive = i === cursor
             return (
-              <box
-                key={prov.id}
-                height={1}
-                width="100%"
-                flexDirection="row"
-                backgroundColor={isActive ? '#292e42' : 'transparent'}
-              >
-                <text fg="#565f89" width={2}> </text>
-                <text fg={isActive ? '#c0caf5' : '#565f89'} width={Math.floor((CARD_W - 10) / 2)}>{prov.name}</text>
-                <text fg={isActive ? '#7aa2f7' : '#292e42'} width={Math.floor((CARD_W - 10) / 2)}>{prov.type}</text>
-                <text fg="#7dcfff" width={2}>{isActive ? '›' : ' '}</text>
+              <box key={prov.id} height={1} width="100%" flexDirection="row" backgroundColor={isActive ? theme.border : 'transparent'}>
+                <text fg={theme.dim} width={2}> </text>
+                <text fg={isActive ? theme.text : theme.dim} width={Math.floor((CARD_W - 10) / 2)}>{prov.name}</text>
+                <text fg={isActive ? theme.primary : theme.border} width={Math.floor((CARD_W - 10) / 2)}>{prov.type}</text>
+                <text fg={theme.accent} width={2}>{isActive ? '›' : ' '}</text>
               </box>
             )
           })}
         </scrollbox>
 
-        <box height={1} backgroundColor="#292e42" />
+        <box height={1} backgroundColor={theme.border} />
 
         <box flexDirection="row" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1}>
-          <text fg="#565f89">{filtered.length} providers</text>
-          <text fg="#565f89">   [↑↓/PgUp/PgDn/wheel] scroll</text>
+          <text fg={theme.dim}>{filtered.length} providers</text>
+          <text fg={theme.dim}>   [↑↓/PgUp/PgDn/wheel] scroll</text>
         </box>
       </box>
     </box>

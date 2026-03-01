@@ -1,5 +1,8 @@
 import { useKeyboard, useRenderer } from '@opentui/react'
 import { AppProvider, useAppContext, type Screen } from './context/AppContext.tsx'
+import { ThemeProvider, useTheme } from './theme/ThemeContext.tsx'
+import { ModalProvider, useModal } from './context/ModalContext.tsx'
+import { ThemePicker } from './components/ThemePicker.tsx'
 import { Header } from './components/Header.tsx'
 import { Footer } from './components/Footer.tsx'
 import { MainMenuScreen } from './screens/MainMenuScreen.tsx'
@@ -14,16 +17,14 @@ import { ListProvidersScreen } from './screens/ListProvidersScreen.tsx'
 function getHints(screen: Screen, benchResults: import('./context/AppContext.tsx').AppState['benchResults']): string[] {
   switch (screen) {
     case 'main-menu':
-      return ['[↑↓] navigate', '[Enter] select', '[Ctrl+C] quit']
+      return ['[↑↓] navigate', '[Enter] select', '[T] theme', '[Ctrl+C] quit']
     case 'model-menu':
       return ['[↑↓] navigate', '[Enter] select', '[Q] back']
     case 'model-select':
       return ['[↑↓] navigate', '[Tab] select', '[Enter] run', '[A] all', '[N] none', '[R] recent', '[Esc] back']
     case 'benchmark': {
       const allDone = benchResults.length > 0 && benchResults.every(r => r.status === 'done' || r.status === 'error')
-      return allDone
-        ? ['[Enter] back to menu', '[Q] back to menu']
-        : ['Benchmark in progress...']
+      return allDone ? ['[Enter] back to menu', '[Q] back to menu'] : ['Benchmark in progress...']
     }
     case 'list-providers':
       return ['[↑↓] scroll', '[Q] back']
@@ -55,28 +56,36 @@ function ActiveScreen() {
 function Shell() {
   const renderer = useRenderer()
   const { state } = useAppContext()
+  const theme = useTheme()
+  const { modalOpen, setModalOpen } = useModal()
 
   useKeyboard((key) => {
-    if (key.ctrl && key.name === 'c') {
-      renderer.destroy()
+    if (key.ctrl && key.name === 'c') { renderer.destroy(); return }
+    if (!key.ctrl && !key.meta && key.sequence === 'T') {
+      setModalOpen(!modalOpen)
     }
   })
 
   return (
-    <box flexDirection="column" height="100%" width="100%" backgroundColor="#1a1b26">
+    <box flexDirection="column" height="100%" width="100%" backgroundColor={theme.background}>
       <Header screen={state.screen} />
       <box flexGrow={1} flexDirection="column">
         <ActiveScreen />
       </box>
       <Footer hints={getHints(state.screen, state.benchResults)} />
+      {modalOpen && <ThemePicker onClose={() => setModalOpen(false)} />}
     </box>
   )
 }
 
-export function App({ logMode = false }: { logMode?: boolean }) {
+export function App({ logMode = false, theme = 'tokyonight' }: { logMode?: boolean; theme?: string }) {
   return (
-    <AppProvider logMode={logMode}>
-      <Shell />
-    </AppProvider>
+    <ThemeProvider name={theme}>
+      <ModalProvider>
+        <AppProvider logMode={logMode}>
+          <Shell />
+        </AppProvider>
+      </ModalProvider>
+    </ThemeProvider>
   )
 }

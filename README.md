@@ -85,7 +85,7 @@ ai-speedometer-headless --bench-custom myprovider:mymodel \
 
 ## Features
 - **Monorepo Architecture** - Split into `core`, `ai-speedometer` (TUI), and `ai-speedometer-headless` (dedicated CLI)
-- **Interactive TUI** - Full terminal UI with Tokyo Night theme, menus, search, and live benchmark progress
+- **Interactive TUI** - Full terminal UI with theming support, menus, search, and live benchmark progress
 - **Headless Mode** - Run benchmarks without interactive UI via CLI flags — outputs JSON, perfect for CI/CD
 - **Node.js Compatible Headless** - `ai-speedometer-headless` targets Node.js, no Bun required
 - **REST API Benchmarking** - Works with all OpenAI-compatible providers
@@ -121,6 +121,9 @@ API keys and configuration are stored in:
   - Backup: `~/.config/ai-speedometer/ai-benchmark-config.json` (verifiedProviders section)
 - **Custom Providers**: `~/.config/ai-speedometer/ai-benchmark-config.json` (customProviders section)
 - **Provider Definitions**: `./custom-verified-providers.json` (bundled at build time)
+- **Theme**: set `"theme"` in `ai-benchmark-config.json` — available themes:
+  - Dark: `tokyonight` (default), `dracula`, `catppuccin`, `kanagawa`, `rosepine`, `nord`
+  - Light: `github`, `everforest`, `solarized`
 
 ## Requirements
 

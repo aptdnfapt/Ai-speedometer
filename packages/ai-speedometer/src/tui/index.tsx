@@ -6,6 +6,9 @@ const ENABLE_BRACKETED_PASTE  = '\x1b[?2004h'
 const DISABLE_BRACKETED_PASTE = '\x1b[?2004l'
 
 export async function startTui(logMode = false): Promise<void> {
+  const { readThemeFromConfig } = await import('@ai-speedometer/core/ai-config')
+  const theme = await readThemeFromConfig()
+
   const renderer = await createCliRenderer({
     exitOnCtrlC: false
   })
@@ -23,5 +26,5 @@ export async function startTui(logMode = false): Promise<void> {
     process.exit(0)
   })
 
-  createRoot(renderer).render(<App logMode={logMode} />)
+  createRoot(renderer).render(<App logMode={logMode} theme={theme} />)
 }
