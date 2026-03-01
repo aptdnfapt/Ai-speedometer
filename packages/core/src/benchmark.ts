@@ -59,7 +59,8 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
       messages: [{ role: 'user', content: testPrompt }],
       max_tokens: 500,
       temperature: 0.7,
-      stream: true
+      stream: true,
+      stream_options: { include_usage: true }
     }
 
     if (model.providerType === 'google') {
@@ -68,6 +69,9 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
       delete body['messages']
       delete body['max_tokens']
       delete body['stream']
+      delete body['stream_options']
+    } else if (model.providerType === 'anthropic') {
+      delete body['stream_options']
     }
 
     const response = await fetch(url, {
@@ -115,7 +119,7 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
           if (model.providerType === 'anthropic') {
             if (trimmedLine.startsWith('data: ')) {
               const jsonStr = trimmedLine.slice(6)
-              if (jsonStr === '[DONE]') break
+              if (jsonStr === '[DONE]') continue
               const chunk = JSON.parse(jsonStr) as Record<string, unknown>
               const chunkTyped = chunk as {
                 type?: string
@@ -162,7 +166,7 @@ export async function benchmarkSingleModelRest(model: Model): Promise<BenchmarkR
           } else {
             if (trimmedLine.startsWith('data: ')) {
               const jsonStr = trimmedLine.slice(6)
-              if (jsonStr === '[DONE]') break
+              if (jsonStr === '[DONE]') continue
               const chunk = JSON.parse(jsonStr) as {
                 choices?: Array<{ delta?: { content?: string; reasoning?: string } }>
                 usage?: { prompt_tokens?: number; completion_tokens?: number }
