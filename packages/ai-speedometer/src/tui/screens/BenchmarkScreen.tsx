@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { useKeyboard } from '@opentui/react'
+import { engine, Timeline } from '@opentui/core'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
 import type { ModelBenchState, BenchmarkResult } from '@ai-speedometer/core/types'
 import { BarChart } from '../components/BarChart.tsx'
@@ -24,9 +25,21 @@ export function BenchmarkScreen() {
 
   const [modelStates, setModelStates] = useState<ModelBenchState[]>([])
   const [spinnerFrame, setSpinnerFrame] = useState(0)
+  const [shimmerPos, setShimmerPos] = useState(0)
   const [allDone, setAllDone] = useState(false)
   const spinnerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startedRef = useRef(false)
+
+  useEffect(() => {
+    const tl = new Timeline({ loop: true, duration: 1400 })
+    const target = { pos: 0 }
+    tl.add(target, { pos: 1, duration: 1400, ease: 'inOutSine', onUpdate: (anim) => {
+      setShimmerPos((anim.targets[0] as { pos: number }).pos)
+    } }, 0)
+    tl.play()
+    engine.register(tl)
+    return () => { tl.pause(); engine.unregister(tl) }
+  }, [])
 
   useEffect(() => {
     if (startedRef.current) return
@@ -128,12 +141,33 @@ export function BenchmarkScreen() {
       const total = modelStates.length || 1
       const filled = Math.round(((done.length + errors.length) / total) * BAR_W)
       const empty  = BAR_W - filled
+
+      // shimmer sweeps full bar width — bright on filled, ghost-dim on empty
+      const shimmerCenter = shimmerPos * (BAR_W - 1)
+      const shimmerHalf = 1.5
+      const barChars = Array.from({ length: BAR_W }, (_, i) => {
+        const isFilled = i < filled
+        const dist = Math.abs(i - shimmerCenter)
+        const inWindow = dist <= shimmerHalf
+        const intensity = inWindow ? 1 - dist / shimmerHalf : 0
+        if (isFilled) {
+          if (intensity > 0.6) return { ch: '█', fg: '#c8eeff' }
+          if (intensity > 0)   return { ch: '▓', fg: '#a0d8f0' }
+          return { ch: '█', fg: '#4a9abb' }
+        } else {
+          if (intensity > 0.6) return { ch: '░', fg: '#2a3a52' }
+          if (intensity > 0)   return { ch: '░', fg: '#222d40' }
+          return { ch: '░', fg: '#1a2030' }
+        }
+      })
+
       rows.push(
         <box key="progress-bar" height={1} flexDirection="row" paddingLeft={2}>
           <text fg="#565f89">Benchmarking  </text>
           <text fg="#7dcfff">{done.length + errors.length}/{modelStates.length}  </text>
-          <text fg="#7dcfff">{'█'.repeat(filled)}</text>
-          <text fg="#292e42">{'░'.repeat(empty)}</text>
+          {barChars.map((b, i) => (
+            <text key={i} fg={b.fg}>{b.ch}</text>
+          ))}
           <text fg="#ff9e64">  {running.length} running...</text>
         </box>
       )
@@ -266,7 +300,7 @@ export function BenchmarkScreen() {
     }
 
     return rows
-  }, [modelStates, allDone, tpsRanked, ttftRanked, doneResults, pendingCount, maxTps, maxTtftForBar])
+  }, [modelStates, allDone, shimmerPos, tpsRanked, ttftRanked, doneResults, pendingCount, maxTps, maxTtftForBar])
 
   useKeyboard((key) => {
     if (!allDone) return

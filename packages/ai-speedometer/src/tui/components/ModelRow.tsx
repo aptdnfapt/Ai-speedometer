@@ -1,6 +1,6 @@
 import type { Model, BenchmarkResult } from '@ai-speedometer/core/types'
 
-export const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+export const SPINNER_FRAMES = ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷']
 
 interface ModelRowProps {
   status: 'pending' | 'running' | 'done' | 'error'
