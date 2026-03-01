@@ -86,6 +86,9 @@ ai-speedometer-headless --bench-custom myprovider:mymodel \
 ## Features
 - **Monorepo Architecture** - Split into `core`, `ai-speedometer` (TUI), and `ai-speedometer-headless` (dedicated CLI)
 - **Interactive TUI** - Full terminal UI with theming support, menus, search, and live benchmark progress
+- **33 Themes** - Full theme system ported from opencode — dark themes (tokyonight, dracula, catppuccin, kanagawa, rosepine, nord, gruvbox, monokai, synthwave84, and more) and light themes (github, everforest, solarized, flexoki, vercel, mercury)
+- **Live Theme Switcher** - Press `T` anywhere in the app to open a searchable theme picker — changes apply instantly across the entire UI and persist to config
+- **Animated Progress Bar** - Smooth glow/dim sine wave animation during benchmarks, fully theme-aware
 - **Headless Mode** - Run benchmarks without interactive UI via CLI flags — outputs JSON, perfect for CI/CD
 - **Node.js Compatible Headless** - `ai-speedometer-headless` targets Node.js, no Bun required
 - **REST API Benchmarking** - Works with all OpenAI-compatible providers
@@ -121,9 +124,9 @@ API keys and configuration are stored in:
   - Backup: `~/.config/ai-speedometer/ai-benchmark-config.json` (verifiedProviders section)
 - **Custom Providers**: `~/.config/ai-speedometer/ai-benchmark-config.json` (customProviders section)
 - **Provider Definitions**: `./custom-verified-providers.json` (bundled at build time)
-- **Theme**: set `"theme"` in `ai-benchmark-config.json` — available themes:
-  - Dark: `tokyonight` (default), `dracula`, `catppuccin`, `kanagawa`, `rosepine`, `nord`
-  - Light: `github`, `everforest`, `solarized`
+- **Theme**: set `"theme"` in `ai-benchmark-config.json`, or press `T` inside the TUI to switch live
+  - Dark: `tokyonight` (default), `dracula`, `catppuccin`, `catppuccin-frappe`, `catppuccin-macchiato`, `kanagawa`, `rosepine`, `nord`, `gruvbox`, `monokai`, `one-dark`, `nightowl`, `aura`, `ayu`, `carbonfox`, `cobalt2`, `cursor`, `material`, `matrix`, `opencode`, `orng`, `lucent-orng`, `osaka-jade`, `palenight`, `synthwave84`, `vesper`, `zenburn`
+  - Light: `github`, `everforest`, `solarized`, `flexoki`, `mercury`, `vercel`
 
 ## Requirements
 
