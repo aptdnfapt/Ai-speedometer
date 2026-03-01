@@ -179,15 +179,15 @@ export function ModelSelectScreen() {
       }
       return
     }
-    if (!searchQuery && (key.sequence === 'A' || key.sequence === 'a')) {
+    if (!searchQuery && key.sequence === 'A') {
       setSelected(new Set(orderedModels.map(m => m.key)))
       return
     }
-    if (!searchQuery && (key.sequence === 'N' || key.sequence === 'n')) {
+    if (!searchQuery && key.sequence === 'N') {
       setSelected(new Set())
       return
     }
-    if (!searchQuery && recentCount > 0 && (key.sequence === 'R' || key.sequence === 'r')) {
+    if (!searchQuery && recentCount > 0 && key.sequence === 'R') {
       launchBench(orderedModels.slice(0, recentCount))
       return
     }

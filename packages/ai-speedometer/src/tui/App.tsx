@@ -16,25 +16,25 @@ function getHints(screen: Screen, benchResults: import('./context/AppContext.tsx
     case 'main-menu':
       return ['[↑↓] navigate', '[Enter] select', '[Ctrl+C] quit']
     case 'model-menu':
-      return ['[↑↓] navigate', '[Enter] select', '[q] back']
+      return ['[↑↓] navigate', '[Enter] select', '[Q] back']
     case 'model-select':
       return ['[↑↓] navigate', '[Tab] select', '[Enter] run', '[A] all', '[N] none', '[R] recent', '[Esc] back']
     case 'benchmark': {
       const allDone = benchResults.length > 0 && benchResults.every(r => r.status === 'done' || r.status === 'error')
       return allDone
-        ? ['[Enter] back to menu', '[q] back to menu']
+        ? ['[Enter] back to menu', '[Q] back to menu']
         : ['Benchmark in progress...']
     }
     case 'list-providers':
-      return ['[↑↓] scroll', '[q] back']
+      return ['[↑↓] scroll', '[Q] back']
     case 'add-verified':
-      return ['[↑↓] navigate', '[Enter] select', '[q] back']
+      return ['[↑↓] navigate', '[Enter] select', '[Q] back']
     case 'add-custom':
       return ['[↑↓] navigate', '[Enter] confirm', '[Esc] back']
     case 'add-models':
       return ['[↑↓] navigate', '[Enter] add / finish', '[Esc] back']
     default:
-      return ['[q] back']
+      return ['[Q] back']
   }
 }
 
