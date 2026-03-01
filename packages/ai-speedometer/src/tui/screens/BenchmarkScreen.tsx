@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { useAppKeyboard as useKeyboard } from '../hooks/useAppKeyboard.ts'
-import { engine, Timeline } from '@opentui/core'
 import { useAppContext, useNavigate } from '../context/AppContext.tsx'
 import { useTheme } from '../theme/ThemeContext.tsx'
 import type { ModelBenchState, BenchmarkResult } from '@ai-speedometer/core/types'
 import { BarChart } from '../components/BarChart.tsx'
+import { GlowBar } from '../components/GlowBar.tsx'
 import { ResultsTable } from '../components/ResultsTable.tsx'
 
 const BAR_W = 25
@@ -23,21 +23,9 @@ export function BenchmarkScreen() {
 
   const [modelStates, setModelStates] = useState<ModelBenchState[]>([])
   const [spinnerFrame, setSpinnerFrame] = useState(0)
-  const [shimmerPos, setShimmerPos] = useState(0)
   const [allDone, setAllDone] = useState(false)
   const spinnerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startedRef = useRef(false)
-
-  useEffect(() => {
-    const tl = new Timeline({ loop: true, duration: 1400 })
-    const target = { pos: 0 }
-    tl.add(target, { pos: 1, duration: 1400, ease: 'inOutSine', onUpdate: (anim) => {
-      setShimmerPos((anim.targets[0] as { pos: number }).pos)
-    } }, 0)
-    tl.play()
-    engine.register(tl)
-    return () => { tl.pause(); engine.unregister(tl) }
-  }, [])
 
   useEffect(() => {
     if (startedRef.current) return
@@ -134,36 +122,8 @@ export function BenchmarkScreen() {
     const rows: ReactNode[] = []
 
     if (!allDone) {
-      const total = modelStates.length || 1
-      const filled = Math.round(((done.length + errors.length) / total) * BAR_W)
-
-      const shimmerCenter = shimmerPos * (BAR_W - 1)
-      const shimmerHalf = 1.5
-      const barChars = Array.from({ length: BAR_W }, (_, i) => {
-        const isFilled = i < filled
-        const dist = Math.abs(i - shimmerCenter)
-        const inWindow = dist <= shimmerHalf
-        const intensity = inWindow ? 1 - dist / shimmerHalf : 0
-        if (isFilled) {
-          if (intensity > 0.6) return { ch: '█', fg: '#c8eeff' }
-          if (intensity > 0)   return { ch: '▓', fg: '#a0d8f0' }
-          return { ch: '█', fg: theme.accent }
-        } else {
-          if (intensity > 0.6) return { ch: '░', fg: theme.border }
-          if (intensity > 0)   return { ch: '░', fg: theme.surface }
-          return { ch: '░', fg: theme.background }
-        }
-      })
-
       rows.push(
-        <box key="progress-bar" height={1} flexDirection="row" paddingLeft={2}>
-          <text fg={theme.dim}>Benchmarking  </text>
-          <text fg={theme.accent}>{done.length + errors.length}/{modelStates.length}  </text>
-          {barChars.map((b, i) => (
-            <text key={i} fg={b.fg}>{b.ch}</text>
-          ))}
-          <text fg={theme.warning}>  {running.length} running...</text>
-        </box>
+        <GlowBar key="progress-bar" done={done.length + errors.length} total={modelStates.length} running={running.length} />
       )
       for (const s of modelStates.filter(s => s.status === 'done' || s.status === 'error')) {
         if (s.status === 'done') {
@@ -290,7 +250,7 @@ export function BenchmarkScreen() {
     }
 
     return rows
-  }, [modelStates, allDone, shimmerPos, tpsRanked, ttftRanked, doneResults, pendingCount, maxTps, maxTtftForBar, theme])
+  }, [modelStates, allDone, tpsRanked, ttftRanked, doneResults, pendingCount, maxTps, maxTtftForBar, theme])
 
   useKeyboard((key) => {
     if (!allDone) return
