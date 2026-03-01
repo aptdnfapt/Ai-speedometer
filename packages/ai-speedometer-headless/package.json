@@ -1,6 +1,6 @@
 {
   "name": "ai-speedometer-headless",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Headless CLI for benchmarking AI models — runs on Node.js and Bun, no TUI dependencies",
   "bin": {
     "ai-speedometer-headless": "dist/ai-speedometer-headless"
