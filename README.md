@@ -1,6 +1,6 @@
 # Ai-speedometer
 
-A CLI tool for benchmarking AI models across multiple providers with parallel execution and performance metrics.
+A CLI tool for benchmarking AI models across multiple providers with parallel execution and performance metrics. fully opencode Compatible 
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/6S7HwCxbMy)
 
@@ -56,7 +56,7 @@ bun run packages/ai-speedometer/src/index.ts
 ### Interactive TUI (`ai-speedometer` only)
 ```bash
 ai-speedometer
-# or short alias
+# or short alias and just use ! auto configured via opencode dont have to re add provider here . 
 aispeed
 ```
 
@@ -84,6 +84,8 @@ ai-speedometer-headless --bench-custom myprovider:mymodel \
 ```
 
 ## Features
+
+- **opencode config Compatible aka models / provider from opencode works out of the box in this cli no need to re add them**
 - **Monorepo Architecture** - Split into `core`, `ai-speedometer` (TUI), and `ai-speedometer-headless` (dedicated CLI)
 - **Interactive TUI** - Full terminal UI with theming support, menus, search, and live benchmark progress
 - **33 Themes** - Full theme system ported from opencode — dark themes (tokyonight, dracula, catppuccin, kanagawa, rosepine, nord, gruvbox, monokai, synthwave84, and more) and light themes (github, everforest, solarized, flexoki, vercel, mercury)
