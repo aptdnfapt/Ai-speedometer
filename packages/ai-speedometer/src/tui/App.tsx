@@ -25,7 +25,7 @@ function getHints(screen: Screen, benchResults: import('./context/AppContext.tsx
       return ['[↑↓] navigate', '[Tab] select', '[Enter] run', '[A] all', '[N] none', '[R] recent', '[Esc] back']
     case 'benchmark': {
       const allDone = benchResults.length > 0 && benchResults.every(r => r.status === 'done' || r.status === 'error')
-      return allDone ? ['[Enter] back to menu', '[Q] back to menu'] : ['Benchmark in progress...']
+      return allDone ? ['[R] rerun', '[Enter] back to menu', '[Q] back to menu'] : ['Benchmark in progress...']
     }
     case 'list-providers':
       return ['[↑↓] scroll', '[Q] back']

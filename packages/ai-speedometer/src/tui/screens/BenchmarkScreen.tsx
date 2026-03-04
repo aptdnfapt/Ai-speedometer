@@ -24,17 +24,15 @@ export function BenchmarkScreen() {
   const [modelStates, setModelStates] = useState<ModelBenchState[]>([])
   const [spinnerFrame, setSpinnerFrame] = useState(0)
   const [allDone, setAllDone] = useState(false)
+  const [runKey, setRunKey] = useState(0)
   const spinnerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const startedRef = useRef(false)
 
   useEffect(() => {
-    if (startedRef.current) return
-    startedRef.current = true
-
     const models = state.benchResults.map(r => r.model)
     if (models.length === 0) return
 
     setModelStates(models.map(m => ({ model: m, status: 'pending' as const })))
+    setAllDone(false)
 
     spinnerRef.current = setInterval(() => setSpinnerFrame(f => f + 1), 80)
 
@@ -101,7 +99,12 @@ export function BenchmarkScreen() {
     return () => {
       if (spinnerRef.current) { clearInterval(spinnerRef.current); spinnerRef.current = null }
     }
-  }, [])
+  }, [runKey])
+
+  const rerun = () => {
+    if (spinnerRef.current) { clearInterval(spinnerRef.current); spinnerRef.current = null }
+    setRunKey(k => k + 1)
+  }
 
   const done = modelStates.filter(m => m.status === 'done')
   const running = modelStates.filter(m => m.status === 'running')
@@ -291,6 +294,10 @@ export function BenchmarkScreen() {
 
   useKeyboard((key) => {
     if (!allDone) return
+    if (key.shift && key.name === 'r') {
+      rerun()
+      return
+    }
     if (key.name === 'q' || key.name === 'return' || key.name === 'enter') {
       dispatch({ type: 'BENCH_RESET' })
       navigate('main-menu')
@@ -300,7 +307,7 @@ export function BenchmarkScreen() {
   const statusLine = allDone
     ? (
       <box flexDirection="row">
-        <text fg={theme.success}>All done!  [Enter]/[Q] return  [↑↓/PgUp/PgDn/wheel] scroll</text>
+        <text fg={theme.success}>All done!  [R] rerun  [Enter]/[Q] return  [↑↓/PgUp/PgDn/wheel] scroll</text>
         {state.logMode && state.logPath && (
           <text fg={theme.dim}>  log: {state.logPath}</text>
         )}
