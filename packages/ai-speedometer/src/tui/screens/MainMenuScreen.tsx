@@ -14,6 +14,7 @@ export function MainMenuScreen() {
   const ITEMS = [
     { label: '⚡ Run Benchmark',  desc: 'test model speed & throughput',  color: theme.accent },
     { label: '⚙  Manage Models',  desc: 'add providers and configure',     color: theme.secondary },
+    { label: '?  FAQ / Learn',    desc: 'how metrics work & resources',    color: theme.primary },
     { label: '✕  Exit',           desc: 'quit the application',            color: theme.error },
   ]
 
@@ -25,7 +26,8 @@ export function MainMenuScreen() {
     } else if (key.name === 'enter' || key.name === 'return') {
       if (cursor === 0) navigate('model-select')
       else if (cursor === 1) navigate('model-menu')
-      else if (cursor === 2) renderer.destroy()
+      else if (cursor === 2) navigate('faq')
+      else if (cursor === 3) renderer.destroy()
     }
   })
 
@@ -41,7 +43,7 @@ export function MainMenuScreen() {
         borderStyle="rounded"
         borderColor={theme.border}
         backgroundColor={theme.background}
-        width={46}
+        width={48}
       >
         {ITEMS.map((item, i) => {
           const active = i === cursor

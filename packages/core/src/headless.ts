@@ -62,6 +62,8 @@ function buildJsonOutput(
     timeToFirstToken: result.timeToFirstToken,
     timeToFirstTokenSeconds: result.timeToFirstToken / 1000,
     tokensPerSecond: result.tokensPerSecond,
+    f1000: result.f1000,
+    f1000Hours: result.f1000 === Infinity ? null : result.f1000,
     outputTokens: result.tokenCount,
     promptTokens: result.promptTokens,
     totalTokens: result.totalTokens,

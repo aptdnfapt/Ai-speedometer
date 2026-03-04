@@ -113,7 +113,9 @@ export function BenchmarkScreen() {
 
   const tpsRanked = done.slice().sort((a, b) => (b.result?.tokensPerSecond ?? 0) - (a.result?.tokensPerSecond ?? 0))
   const ttftRanked = done.slice().sort((a, b) => (a.result?.timeToFirstToken ?? 0) - (b.result?.timeToFirstToken ?? 0))
+  const f1000Ranked = done.slice().sort((a, b) => (a.result?.f1000 ?? Infinity) - (b.result?.f1000 ?? Infinity))
   const maxTtftForBar = Math.max(...done.map(m => (m.result?.timeToFirstToken ?? 0) / 1000), 1)
+  const maxF1000 = Math.max(...done.map(m => m.result?.f1000 ?? 0), 1)
 
   const doneResults: BenchmarkResult[] = tpsRanked.map(m => m.result!)
   const pendingCount = running.length + pending.length
@@ -210,6 +212,41 @@ export function BenchmarkScreen() {
       }
     }
 
+    if (f1000Ranked.length > 0) {
+      rows.push(<box key="div-f1000" height={1} backgroundColor={theme.border} />)
+      rows.push(
+        <box key="hdr-f1000" height={1} flexDirection="row" paddingLeft={1}>
+          <text fg={theme.primary}> F1000 RANKING - First to 1000 Requests  (lower is better) </text>
+        </box>
+      )
+      for (const [i, s] of f1000Ranked.entries()) {
+        const rank = i + 1
+        const rankFg = rank === 1 ? theme.accent : rank === 2 ? theme.secondary : theme.dim
+        const f1000 = s.result?.f1000 ?? Infinity
+        const f1000Str = f1000 === Infinity ? '∞' : f1000.toFixed(2)
+        const ttft = (s.result?.timeToFirstToken ?? 0) / 1000
+        const tps  = s.result?.tokensPerSecond ?? 0
+        const badge = rankBadge(rank).padStart(3)
+        const modelCol = s.model.name.padEnd(18).slice(0, 18)
+        const provCol  = s.model.providerName.padEnd(12).slice(0, 12)
+        rows.push(
+          <box key={`f1000-${s.model.id}-${s.model.providerId}`} height={1} flexDirection="row" paddingLeft={2}>
+            <text fg={rankFg}>{badge}  </text>
+            <text fg={theme.dim}> │ </text>
+            <text fg={theme.primary}>{f1000Str.padStart(7)}h  </text>
+            <text fg={theme.dim}> │ </text>
+            <text fg={theme.secondary}>{ttft.toFixed(2).padStart(5)}s  </text>
+            <text fg={theme.dim}> │ </text>
+            <text fg={theme.accent}>{tps.toFixed(0).padStart(5)} tok/s  </text>
+            <text fg={theme.dim}> │ </text>
+            <text fg={theme.text}>{modelCol}  </text>
+            <text fg={theme.dim}>{provCol}  │  </text>
+            <BarChart value={f1000 === Infinity ? maxF1000 : f1000} max={maxF1000} width={BAR_W} color={theme.primary} />
+          </box>
+        )
+      }
+    }
+
     if (allDone && errors.length > 0) {
       rows.push(<box key="div-errors" height={1} backgroundColor={theme.border} />)
       rows.push(
@@ -250,7 +287,7 @@ export function BenchmarkScreen() {
     }
 
     return rows
-  }, [modelStates, allDone, tpsRanked, ttftRanked, doneResults, pendingCount, maxTps, maxTtftForBar, theme])
+  }, [modelStates, allDone, tpsRanked, ttftRanked, f1000Ranked, doneResults, pendingCount, maxTps, maxTtftForBar, maxF1000, theme])
 
   useKeyboard((key) => {
     if (!allDone) return

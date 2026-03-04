@@ -29,6 +29,7 @@ export interface BenchmarkResult {
   timeToFirstToken: number
   tokenCount: number
   tokensPerSecond: number
+  f1000: number
   promptTokens: number
   totalTokens: number
   usedEstimateForOutput: boolean

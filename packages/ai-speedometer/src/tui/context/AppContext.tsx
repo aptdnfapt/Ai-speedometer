@@ -10,6 +10,7 @@ export type Screen =
   | 'add-custom'
   | 'add-models'
   | 'list-providers'
+  | 'faq'
 
 export interface AppState {
   screen: Screen

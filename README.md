@@ -49,6 +49,7 @@ bun run packages/ai-speedometer/src/index.ts
 - **TTFT** (Time to First Token) - How fast the first response token arrives
 - **Total Time** - Complete request duration
 - **Tokens/Second** - Real-time throughput
+- **F1000** (First to 1000) - Time to complete 1000 agentic requests (~300 tokens each), shown in hours. Captures real-world coding assistant performance better than TPS or TTFT alone. Lower is better.
 - **Token Counts** - Input, output, and total tokens used
 
 ## Usage
@@ -91,6 +92,8 @@ ai-speedometer-headless --bench-custom myprovider:mymodel \
 - **33 Themes** - Full theme system ported from opencode — dark themes (tokyonight, dracula, catppuccin, kanagawa, rosepine, nord, gruvbox, monokai, synthwave84, and more) and light themes (github, everforest, solarized, flexoki, vercel, mercury)
 - **Live Theme Switcher** - Press `T` anywhere in the app to open a searchable theme picker — changes apply instantly across the entire UI and persist to config
 - **Animated Progress Bar** - Smooth glow/dim sine wave animation during benchmarks, fully theme-aware
+- **F1000 Metric** - First to 1000: measures real-world agentic coding performance (1000 requests × ~300 tokens)
+- **FAQ/Learn Section** - In-app documentation explaining metrics, formulas, and resources
 - **Headless Mode** - Run benchmarks without interactive UI via CLI flags — outputs JSON, perfect for CI/CD
 - **Node.js Compatible Headless** - `ai-speedometer-headless` targets Node.js, no Bun required
 - **REST API Benchmarking** - Works with all OpenAI-compatible providers

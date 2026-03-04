@@ -13,6 +13,7 @@ import { AddVerifiedScreen } from './screens/AddVerifiedScreen.tsx'
 import { AddCustomScreen } from './screens/AddCustomScreen.tsx'
 import { AddModelsScreen } from './screens/AddModelsScreen.tsx'
 import { ListProvidersScreen } from './screens/ListProvidersScreen.tsx'
+import { FAQScreen } from './screens/FAQScreen.tsx'
 
 function getHints(screen: Screen, benchResults: import('./context/AppContext.tsx').AppState['benchResults']): string[] {
   switch (screen) {
@@ -27,6 +28,8 @@ function getHints(screen: Screen, benchResults: import('./context/AppContext.tsx
       return allDone ? ['[Enter] back to menu', '[Q] back to menu'] : ['Benchmark in progress...']
     }
     case 'list-providers':
+      return ['[↑↓] scroll', '[Q] back']
+    case 'faq':
       return ['[↑↓] scroll', '[Q] back']
     case 'add-verified':
       return ['[↑↓] navigate', '[Enter] select', '[Q] back']
@@ -50,6 +53,7 @@ function ActiveScreen() {
     case 'add-custom':     return <AddCustomScreen />
     case 'add-models':     return <AddModelsScreen />
     case 'list-providers': return <ListProvidersScreen />
+    case 'faq':            return <FAQScreen />
   }
 }
 

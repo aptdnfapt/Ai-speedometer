@@ -223,6 +223,9 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
     const finalInputTokens = inputTokens || Math.round((testPrompt as string).length / 4)
     const totalTokens = finalInputTokens + finalOutputTokens
     const tokensPerSecond = generationTime > 0 ? (finalOutputTokens / generationTime) * 1000 : 0
+    const f1000 = tokensPerSecond > 0
+      ? (1000 * (timeToFirstToken / 1000 + 300 / tokensPerSecond)) / 3600
+      : Infinity
 
     return {
       model: model.name,
@@ -231,6 +234,7 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
       timeToFirstToken,
       tokenCount: finalOutputTokens,
       tokensPerSecond,
+      f1000,
       promptTokens: finalInputTokens,
       totalTokens,
       usedEstimateForOutput,
@@ -246,6 +250,7 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
       timeToFirstToken: 0,
       tokenCount: 0,
       tokensPerSecond: 0,
+      f1000: Infinity,
       promptTokens: 0,
       totalTokens: 0,
       usedEstimateForOutput: true,
