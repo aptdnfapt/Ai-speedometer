@@ -1,27 +1,96 @@
-import { TEST_PROMPT as testPrompt } from './constants.ts'
+import {
+  TEST_PROMPT as testPrompt,
+  getOpencodeSystemPrompt,
+  getOpencodeEnvBlock,
+  getOpencodeHeaders,
+  OPENCODE_TOOLS
+} from './constants.ts'
+
 import type { Model, BenchmarkResult } from './types.ts'
 import type { BenchLogger } from './logger.ts'
+
+/* ------------------------------------------------------------
+   opencode-harness benchmark
+   1:1 mimic of opencode CLI request shape (system prompt, tools,
+   headers, env block, coding task) so providers do not flag the
+   benchmark as non-authentic usage.
+   ------------------------------------------------------------ */
+
+function getModelIdForApi(model: Model): string {
+  if (model.id && model.id.includes('_')) {
+    return model.id.split('_')[1]!.trim()
+  } else if (model.id) {
+    return model.id.trim()
+  }
+  return model.name.trim()
+}
+
+function isGitRepo(dir: string): boolean {
+  try {
+    const { execSync } = require('child_process')
+    execSync('git rev-parse --git-dir', { cwd: dir, stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+function buildSystemMessages(modelId: string, providerId: string, cwd: string): Array<{ role: string; content: string }> {
+  const sysPrompt = getOpencodeSystemPrompt(modelId)
+  const envBlock = getOpencodeEnvBlock(modelId, providerId, cwd, isGitRepo(cwd))
+  return [
+    { role: 'system', content: sysPrompt },
+    { role: 'system', content: envBlock }
+  ]
+}
+
+function buildToolList(modelId: string): Array<Record<string, unknown>> {
+  const mid = modelId.toLowerCase()
+  // Exact logic from opencode registry.ts lines 290-295
+  const usePatch = mid.includes('gpt-') && !mid.includes('oss') && !mid.includes('gpt-4')
+
+  const all: Array<Record<string, unknown>> = []
+  const add = (id: string, desc: string, params: Record<string, unknown>) => {
+    all.push({
+      type: 'function',
+      function: { name: id, description: desc, parameters: params }
+    })
+  }
+
+  // Always include
+  add(OPENCODE_TOOLS.read.name, OPENCODE_TOOLS.read.description, OPENCODE_TOOLS.read.parameters)
+  add(OPENCODE_TOOLS.glob.name, OPENCODE_TOOLS.glob.description, OPENCODE_TOOLS.glob.parameters)
+  add(OPENCODE_TOOLS.grep.name, OPENCODE_TOOLS.grep.description, OPENCODE_TOOLS.grep.parameters)
+  add(OPENCODE_TOOLS.task.name, OPENCODE_TOOLS.task.description, OPENCODE_TOOLS.task.parameters)
+  add(OPENCODE_TOOLS.webfetch.name, OPENCODE_TOOLS.webfetch.description, OPENCODE_TOOLS.webfetch.parameters)
+  add(OPENCODE_TOOLS.websearch.name, OPENCODE_TOOLS.websearch.description, OPENCODE_TOOLS.websearch.parameters)
+  add(OPENCODE_TOOLS.todowrite.name, OPENCODE_TOOLS.todowrite.description, OPENCODE_TOOLS.todowrite.parameters)
+  add(OPENCODE_TOOLS.question.name, OPENCODE_TOOLS.question.description, OPENCODE_TOOLS.question.parameters)
+  add(OPENCODE_TOOLS.skill.name, OPENCODE_TOOLS.skill.description, OPENCODE_TOOLS.skill.parameters)
+
+  if (usePatch) {
+    add(OPENCODE_TOOLS.apply_patch.name, OPENCODE_TOOLS.apply_patch.description, OPENCODE_TOOLS.apply_patch.parameters)
+  } else {
+    add(OPENCODE_TOOLS.edit.name, OPENCODE_TOOLS.edit.description, OPENCODE_TOOLS.edit.parameters)
+    add(OPENCODE_TOOLS.write.name, OPENCODE_TOOLS.write.description, OPENCODE_TOOLS.write.parameters)
+  }
+
+  // bash is always present; named 'bash' in the tool descriptions
+  add('bash', OPENCODE_TOOLS.bash.description, OPENCODE_TOOLS.bash.parameters)
+
+  return all
+}
 
 export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogger): Promise<BenchmarkResult> {
   try {
     if (!model.providerConfig || !model.providerConfig.apiKey) {
       throw new Error(`Missing API key for provider ${model.providerName}`)
     }
-
     if (!model.providerConfig.baseUrl) {
       throw new Error(`Missing base URL for provider ${model.providerName}`)
     }
 
-    let actualModelId: string
-    if (model.id && model.id.includes('_')) {
-      actualModelId = model.id.split('_')[1]!
-    } else if (model.id) {
-      actualModelId = model.id
-    } else {
-      actualModelId = model.name
-    }
-    actualModelId = actualModelId.trim()
-
+    const actualModelId = getModelIdForApi(model)
     await logger?.logHeader(model.name, model.providerName, model.providerConfig.apiKey)
 
     const startTime = Date.now()
@@ -44,9 +113,13 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
     const baseUrl = model.providerConfig.baseUrl.replace(/\/$/, '')
     const url = `${baseUrl}${endpoint}`
 
+    const cwd = process.cwd()
+
+    // ── Headers (authentic opencode) ──
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${model.providerConfig.apiKey}`
+      Authorization: `Bearer ${model.providerConfig.apiKey}`,
+      ...getOpencodeHeaders(model.providerType === 'anthropic' ? 'anthropic' : 'default')
     }
 
     if (model.providerType === 'anthropic') {
@@ -57,24 +130,50 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
       headers['x-goog-api-key'] = model.providerConfig.apiKey
     }
 
+    // ── Build opencode-shaped messages ──
+    const systemMessages = buildSystemMessages(actualModelId, model.providerId, cwd)
+    const userMessage = { role: 'user', content: testPrompt }
+
+    // ── Build the tool list ──
+    const tools = buildToolList(actualModelId)
+
     const body: Record<string, unknown> = {
       model: actualModelId,
-      messages: [{ role: 'user', content: testPrompt }],
+      messages: [...systemMessages, userMessage],
       max_tokens: 500,
       temperature: 0.7,
       stream: true,
-      stream_options: { include_usage: true }
+      stream_options: { include_usage: true },
+      tools,
+      tool_choice: 'auto'
     }
 
     if (model.providerType === 'google') {
-      body['contents'] = [{ parts: [{ text: testPrompt }] }]
+      body['contents'] = [
+        { parts: systemMessages.map((m) => ({ text: m.content })) },
+        { parts: [{ text: userMessage.content }] }
+      ]
       body['generationConfig'] = { maxOutputTokens: 500, temperature: 0.7 }
       delete body['messages']
       delete body['max_tokens']
       delete body['stream']
       delete body['stream_options']
+      delete body['tools']
+      delete body['tool_choice']
     } else if (model.providerType === 'anthropic') {
       delete body['stream_options']
+      // Anthropic uses top-level system string
+      body['system'] = systemMessages.map((m) => m.content).join('\n\n')
+      body['messages'] = [userMessage]
+      // Anthropic tools shape
+      body['tools'] = tools.map((t: Record<string, unknown>) => {
+        const fn = t.function as Record<string, unknown>
+        return {
+          name: fn.name,
+          description: fn.description,
+          input_schema: fn.parameters
+        }
+      })
     }
 
     const response = await fetch(url, {
