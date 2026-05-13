@@ -141,7 +141,6 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
       model: actualModelId,
       messages: [...systemMessages, userMessage],
       max_tokens: 500,
-      temperature: 0.7,
       stream: true,
       stream_options: { include_usage: true },
       tools,
@@ -153,7 +152,7 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
         { parts: systemMessages.map((m) => ({ text: m.content })) },
         { parts: [{ text: userMessage.content }] }
       ]
-      body['generationConfig'] = { maxOutputTokens: 500, temperature: 0.7 }
+      body['generationConfig'] = { maxOutputTokens: 500 }
       delete body['messages']
       delete body['max_tokens']
       delete body['stream']
@@ -162,6 +161,8 @@ export async function benchmarkSingleModelRest(model: Model, logger?: BenchLogge
       delete body['tool_choice']
     } else if (model.providerType === 'anthropic') {
       delete body['stream_options']
+      // Anthropic uses object tool_choice, not string
+      body['tool_choice'] = { type: 'auto' }
       // Anthropic uses top-level system string
       body['system'] = systemMessages.map((m) => m.content).join('\n\n')
       body['messages'] = [userMessage]
